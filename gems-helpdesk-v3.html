@@ -1,0 +1,1382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>GEMS Service Desk</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Manrope:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1b1b1d; --ink-soft:#2c2c30; --paper:#f5f4f1; --panel:#ffffff;
+    --line:#e5e2dc; --line-soft:#efece6; --slate:#6f7078; --slate-light:#9a9ba3;
+    --ruby:#d81f2c; --ruby-deep:#9c141e; --amber:#c17d0f; --signal:#28518f; --moss:#2e7d52;
+    --font-display:'Barlow Condensed','Arial Narrow',sans-serif;
+    --font-body:'Manrope','Inter',system-ui,sans-serif;
+    --font-mono:'IBM Plex Mono','Courier New',monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;height:100%;}
+  body{font-family:var(--font-body);color:var(--ink);background:var(--paper);}
+  button{font-family:inherit;cursor:pointer;}
+  input,select,textarea{font-family:inherit;font-size:14px;}
+  #root{min-height:100vh;}
+
+  .dot{width:7px;height:7px;border-radius:1.5px;display:inline-block;transform:rotate(45deg);flex-shrink:0;}
+  .pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:4px 10px;font-size:12px;font-weight:700;}
+  .tag{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;}
+  .btn{border:none;border-radius:10px;font-weight:700;padding:10px 18px;font-size:14px;display:inline-flex;align-items:center;gap:8px;}
+  .btn-primary{background:var(--ruby);color:#fff;}
+  .btn-dark{background:var(--ink);color:#fff;}
+  .btn-muted{background:var(--slate);color:#fff;}
+  .btn-ghost{background:transparent;border:1.5px solid var(--line);color:var(--ink);}
+  .btn:disabled{opacity:.55;cursor:default;}
+  .eyebrow{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.14em;color:var(--ruby);margin-bottom:4px;}
+  .h-title{font-family:var(--font-display);font-weight:800;font-size:26px;letter-spacing:.005em;color:var(--ink);}
+  .field-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--slate);display:block;margin-bottom:6px;}
+  .input, select.input, textarea.input{width:100%;border:1.5px solid var(--line);border-radius:10px;padding:10px 14px;outline:none;background:#fff;color:var(--ink);}
+  .input:focus{border-color:var(--ruby);}
+  .input-sm{border:1.5px solid var(--line);border-radius:8px;padding:7px 10px;outline:none;background:#fff;color:var(--ink);font-size:13px;width:100%;}
+  .input-sm:focus{border-color:var(--ruby);}
+  .mono{font-family:var(--font-mono);}
+
+  /* ---------- login ---------- */
+  .login-wrap{
+    min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;
+    background-image:radial-gradient(var(--ruby) 1px, transparent 1px), linear-gradient(160deg, var(--ink), var(--ink-soft));
+    background-size:26px 26px, 100% 100%;
+    background-position:0 0, 0 0;
+  }
+  .login-inner{width:100%;max-width:380px;}
+  .logo-row{display:flex;align-items:center;gap:8px;justify-content:center;margin-bottom:32px;}
+  .logo-row.dark-text .logo-title{color:#f5f4f1;}
+  .logo-row.light-text .logo-title{color:var(--ink);}
+  .logo-title{font-family:var(--font-display);font-weight:800;line-height:1;letter-spacing:.01em;}
+  .logo-sub{font-family:var(--font-body);font-weight:700;color:var(--ruby);letter-spacing:.16em;margin-top:2px;}
+  .login-card{background:#fff;border-radius:18px;padding:28px;box-shadow:0 24px 60px -20px rgba(0,0,0,.55);}
+  .login-card h1{font-family:var(--font-display);font-weight:700;font-size:20px;margin:0 0 4px 0;color:var(--ink);}
+  .login-card p.sub{font-size:13px;color:var(--slate);margin:0 0 20px 0;}
+  .dept-select{position:relative;margin-bottom:16px;}
+  .dept-btn{width:100%;display:flex;align-items:center;justify-content:space-between;border:1.5px solid var(--line);border-radius:10px;padding:11px 14px;font-size:14px;font-weight:600;background:var(--paper);color:var(--slate-light);}
+  .dept-btn.chosen{color:var(--ink);}
+  .dept-btn.open{border-color:var(--ruby);}
+  .dept-list{position:absolute;z-index:20;margin-top:6px;width:100%;background:#fff;border:1px solid var(--line);border-radius:10px;overflow:hidden;max-height:260px;overflow-y:auto;box-shadow:0 16px 40px -12px rgba(0,0,0,.28);display:none;}
+  .dept-list.show{display:block;}
+  .dept-item{width:100%;text-align:left;border:none;background:transparent;padding:11px 14px;font-size:14px;font-weight:600;color:var(--ink);border-bottom:1px solid var(--line-soft);display:flex;align-items:center;justify-content:space-between;}
+  .dept-item:last-child{border-bottom:none;}
+  .dept-item:hover{background:var(--paper);}
+  .form-row{margin-bottom:14px;}
+  .err-box{background:rgba(216,31,44,.08);color:var(--ruby-deep);font-size:12px;font-weight:700;border-radius:10px;padding:9px 12px;margin-bottom:12px;display:none;}
+  .err-box.show{display:block;}
+  .hint-box{margin-top:14px;font-size:12px;color:var(--slate);background:var(--paper);border-radius:10px;padding:9px 12px;display:none;}
+  .hint-box.show{display:block;}
+  .login-footer{text-align:center;font-size:12px;color:var(--slate-light);margin-top:22px;}
+  .loading-txt{color:#e9e9ea;font-size:13px;font-weight:600;text-align:center;}
+
+  /* ---------- app shell ---------- */
+  .app-shell{display:flex;min-height:100vh;}
+  .sidebar{width:240px;flex-shrink:0;background:var(--ink);display:flex;flex-direction:column;padding:16px;}
+  .sidebar .logo-row{justify-content:flex-start;margin:0 0 20px 8px;}
+  .nav{display:flex;flex-direction:column;gap:4px;flex:1;}
+  .nav-item{display:flex;align-items:center;justify-content:space-between;gap:10px;border:none;background:transparent;border-radius:10px;padding:10px 12px;font-size:14px;font-weight:600;color:#c9c9cd;width:100%;text-align:left;}
+  .nav-item .nav-left{display:flex;align-items:center;gap:10px;}
+  .nav-item.active{background:rgba(216,31,44,.14);color:var(--ruby);}
+  .nav-badge{font-size:10px;font-weight:800;border-radius:999px;background:var(--ruby);color:#fff;padding:2px 6px;}
+  .side-user{background:rgba(255,255,255,.06);border-radius:10px;padding:12px;margin-top:10px;}
+  .side-user .d{font-size:12px;font-weight:700;color:#fff;}
+  .side-user .u{font-size:12px;color:#9a9ba3;}
+  .side-user button{border:none;background:transparent;color:var(--ruby);font-size:12px;font-weight:700;margin-top:8px;padding:0;display:flex;align-items:center;gap:5px;}
+  .nav-divider{height:1px;background:rgba(255,255,255,.08);margin:10px 4px;}
+
+  .main{flex:1;overflow-y:auto;}
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:16px 32px;border-bottom:1px solid var(--line);background:#fff;}
+  .topbar .tb-left{font-size:12px;color:var(--slate-light);}
+  .topbar .tb-refresh{border:none;background:transparent;font-size:12px;font-weight:700;color:var(--slate);display:flex;align-items:center;gap:6px;}
+  .content{padding:32px;}
+
+  .section-head{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;}
+
+  .stat-grid{display:grid;gap:16px;margin-bottom:24px;}
+  .stat-grid.g3{grid-template-columns:repeat(3,1fr);}
+  .stat-grid.g4{grid-template-columns:repeat(4,1fr);}
+  .stat-card{padding:16px;}
+  .stat-card .lbl{display:flex;align-items:center;gap:7px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--slate);margin-bottom:8px;}
+  .stat-card .val{font-family:var(--font-display);font-weight:800;font-size:30px;color:var(--ink);}
+
+  .list-header{display:grid;grid-template-columns:1.4fr 2.4fr 1.6fr 1.4fr 1.4fr 1fr;gap:10px;padding:10px 16px;background:var(--paper);font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--slate);}
+  .list-row{display:grid;grid-template-columns:1.4fr 2.4fr 1.6fr 1.4fr 1.4fr 1fr;gap:10px;align-items:center;padding:12px 16px;border-top:1px solid var(--line-soft);width:100%;background:transparent;border-left:none;border-right:none;border-bottom:none;text-align:left;}
+  .list-row:hover{background:rgba(0,0,0,.02);}
+  .list-empty{padding:40px 16px;text-align:center;font-size:14px;color:var(--slate-light);}
+  .truncate{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .right{text-align:right;}
+
+  .filters{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px;}
+  .search-box{display:flex;align-items:center;gap:8px;border:1.5px solid var(--line);border-radius:10px;padding:8px 12px;background:#fff;}
+  .search-box input{border:none;outline:none;width:190px;font-size:13px;}
+  .filters select{border:1.5px solid var(--line);border-radius:10px;padding:8px 12px;font-size:13px;background:#fff;}
+
+  .form-card{max-width:640px;padding:26px;}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  .priority-row{display:flex;gap:8px;}
+  .priority-btn{flex:1;border-radius:10px;padding:9px 0;font-size:12px;font-weight:800;border:1.5px solid var(--line);background:transparent;color:var(--slate);display:flex;align-items:center;justify-content:center;gap:6px;}
+  .priority-btn.selected{border-color:currentColor;}
+  .success-box{margin-bottom:18px;border-radius:12px;padding:12px 16px;background:rgba(46,125,82,.1);display:flex;align-items:center;gap:10px;font-size:14px;}
+
+  .modal-overlay{position:fixed;inset:0;z-index:50;background:rgba(20,20,22,.45);display:none;align-items:stretch;justify-content:flex-end;}
+  .modal-overlay.show{display:flex;}
+  .modal-panel{width:100%;max-width:520px;height:100%;overflow-y:auto;background:#fff;padding:26px;}
+  .modal-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:4px;}
+  .modal-close{border:none;background:transparent;font-size:12px;font-weight:700;color:var(--slate);}
+  .modal-subject{font-family:var(--font-display);font-weight:800;font-size:22px;color:var(--ink);margin-bottom:12px;}
+  .badge-row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px;}
+  .cat-chip{font-size:12px;padding:4px 10px;border-radius:999px;background:var(--paper);color:var(--slate);}
+  .meta-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:12px;margin-bottom:20px;}
+  .meta-grid .k{color:var(--slate-light);}
+  .meta-grid .v{font-weight:700;color:var(--ink);margin-top:2px;}
+  .desc-box{background:var(--paper);border-radius:12px;padding:14px;font-size:14px;line-height:1.6;margin-bottom:22px;}
+  .activity-title{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--slate);margin-bottom:10px;}
+  .activity-item{display:flex;gap:10px;font-size:12px;margin-bottom:12px;}
+  .activity-item .txt b{color:var(--ink);}
+  .activity-item .who{color:var(--slate-light);margin-top:1px;}
+  .it-action{border:1.5px solid var(--line);border-radius:12px;padding:16px;}
+  .quick-row{display:flex;gap:10px;margin-bottom:16px;}
+  .quick-row .btn{flex:1;justify-content:center;}
+  .status-flow{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;}
+  .status-btn{border-radius:999px;padding:6px 12px;font-size:12px;font-weight:800;border:1.5px solid var(--line);background:transparent;color:var(--slate);}
+  .status-btn.selected{border-color:currentColor;}
+  .readonly-note{font-size:12px;background:var(--paper);border-radius:12px;padding:12px;color:var(--slate);}
+
+  .bar-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+  .bar-row .lab{width:112px;font-size:12px;color:var(--ink);flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .bar-track{flex:1;height:8px;border-radius:999px;background:var(--paper);overflow:hidden;}
+  .bar-fill{height:8px;border-radius:999px;}
+  .bar-n{width:24px;text-align:right;font-size:12px;font-weight:800;color:var(--ink);}
+  .scope-toggle{display:flex;border:1.5px solid var(--line);border-radius:10px;overflow:hidden;}
+  .scope-toggle button{border:none;padding:9px 16px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;background:#fff;color:var(--slate);display:flex;align-items:center;gap:6px;}
+  .scope-toggle button.active{background:var(--ink);color:#fff;}
+
+  /* ---------- user management ---------- */
+  .user-header{display:grid;grid-template-columns:1.3fr 1.5fr 1.5fr 1fr;gap:10px;padding:10px 16px;background:var(--paper);font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--slate);}
+  .user-row{display:grid;grid-template-columns:1.3fr 1.5fr 1.5fr 1fr;gap:10px;align-items:center;padding:12px 16px;border-top:1px solid var(--line-soft);}
+  .user-row .dept-badge{font-size:12px;font-weight:700;color:var(--ink);}
+  .pw-cell{display:flex;align-items:center;gap:8px;}
+  .icon-btn{border:1.5px solid var(--line);background:#fff;border-radius:8px;padding:6px 10px;font-size:12px;font-weight:700;color:var(--ink);display:inline-flex;align-items:center;gap:5px;}
+  .icon-btn.danger{color:var(--ruby-deep);border-color:rgba(216,31,44,.35);}
+  .row-actions{display:flex;gap:6px;}
+  .add-user-card{padding:20px;margin-bottom:20px;}
+  .add-user-grid{display:grid;grid-template-columns:1.2fr 1.4fr 1.4fr auto;gap:12px;align-items:end;}
+  .u-err{font-size:12px;font-weight:700;color:var(--ruby-deep);margin-top:8px;display:none;}
+  .u-err.show{display:block;}
+  .u-note{font-size:12px;color:var(--slate);margin-bottom:16px;}
+
+  @media (max-width: 900px){
+    .stat-grid.g3, .stat-grid.g4{grid-template-columns:repeat(2,1fr);}
+    .grid2{grid-template-columns:1fr;}
+    .list-header, .user-header{display:none;}
+    .list-row{grid-template-columns:1fr;gap:4px;}
+    .user-row{grid-template-columns:1fr;gap:6px;}
+    .add-user-grid{grid-template-columns:1fr;}
+    .sidebar{width:200px;}
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script>
+/* ============================================================
+   DATA
+============================================================ */
+var COLORS = {
+  ink:'#1b1b1d', ruby:'#d81f2c', rubyDeep:'#9c141e', amber:'#c17d0f',
+  signal:'#28518f', moss:'#2e7d52', slate:'#6f7078', slateLight:'#9a9ba3'
+};
+
+/* Departments are fixed. Credentials for each are managed by IT (see USERS below). */
+var DEPARTMENTS = [
+  { id:'sales', name:'Sales' },
+  { id:'importation', name:'Importation' },
+  { id:'admin', name:'Admin' },
+  { id:'hr', name:'HR' },
+  { id:'accounting', name:'Accounting' },
+  { id:'finance', name:'Finance' },
+  { id:'production', name:'Production' },
+  { id:'inventory', name:'Inventory Control' },
+  { id:'it', name:'IT (Admin)', isAdmin:true }
+];
+/* Seed accounts created only once, the first time the app runs with no saved users. */
+var SEED_USERS = [
+  { deptId:'sales', username:'sales', password:'sales123' },
+  { deptId:'importation', username:'importation', password:'import123' },
+  { deptId:'admin', username:'admin.dept', password:'admin123' },
+  { deptId:'hr', username:'hr', password:'hr123' },
+  { deptId:'accounting', username:'accounting', password:'acct123' },
+  { deptId:'finance', username:'finance', password:'fin123' },
+  { deptId:'production', username:'production', password:'prod123' },
+  { deptId:'inventory', username:'inventory', password:'inv123' },
+  { deptId:'it', username:'it.admin', password:'P@ssw0rd01' }
+];
+
+var CATEGORIES = [
+  'Hardware','Software','Network / Internet',
+  'System Access (SAP / DMS / Email)','Printer / Peripherals','Other'
+];
+var PRIORITIES = ['Low','Medium','High','Critical'];
+var PRIORITY_COLOR = { Low:COLORS.moss, Medium:COLORS.amber, High:COLORS.ruby, Critical:COLORS.rubyDeep };
+
+var STATUS_FLOW = ['Open','In Review','Approved','In Progress','Resolved','Rejected'];
+var STATUS_COLOR = {
+  'Open':COLORS.ruby, 'In Review':COLORS.amber, 'Approved':COLORS.signal,
+  'In Progress':COLORS.signal, 'Resolved':COLORS.moss, 'Rejected':COLORS.slate
+};
+
+/* Structured request types, layered on top of the same ticket/status pipeline. */
+var REQUEST_TYPE_LABEL = { issue:'General Issue', device:'Device Request', access:'Access / Password Request', newhire:'New Hire Setup' };
+var DEVICE_TYPES = ['Printer','Keyboard','Mouse','PC / Desktop','Laptop','Monitor','Docking Station / Adapter','Other'];
+var ACCESS_TYPES = ['Password Reset','Shared Folder Access','System / Account Access (SAP, DMS, Email)','Other'];
+var EQUIPMENT_OPTIONS = ['PC / Desktop','Laptop','Monitor','Keyboard & Mouse','Headset','Printer Access','Email Account','System Accounts (SAP / DMS)'];
+
+var TICKETS_KEY = 'gems-helpdesk-tickets-v1';
+var USERS_KEY = 'gems-helpdesk-users-v1';
+
+/* ============================================================
+   STATE
+============================================================ */
+var session = null;
+var tickets = [];
+var users = [];
+var usersLoaded = false;
+var view = 'dashboard';
+var activeTicketId = null;
+var selectedDeptId = null;
+var newTicketPriority = 'Medium';
+var newDevicePriority = 'Medium';
+var newAccessPriority = 'Medium';
+var newHirePriority = 'High';
+var newHireEquipment = [];
+var modalStatus = null;
+var reportScope = 'day';
+var editingUserId = null;
+var pwVisible = {};
+
+/* ============================================================
+   STORAGE HELPERS
+   Uses Claude's built-in storage when running inside a Claude.ai
+   artifact preview. When this file is saved and opened as its own
+   standalone page (self-hosted, opened directly in a browser, etc.),
+   it automatically falls back to the browser's own localStorage so
+   the site keeps saving its own data either way.
+============================================================ */
+function hasClaudeStorage(){
+  try{ return typeof window !== 'undefined' && !!window.storage && typeof window.storage.get === 'function'; }
+  catch(e){ return false; }
+}
+async function kvGet(key){
+  if(hasClaudeStorage()){
+    try{ var res = await window.storage.get(key, true); return res && res.value ? res.value : null; }
+    catch(e){ /* fall through to localStorage */ }
+  }
+  try{ return localStorage.getItem(key); } catch(e){ return null; }
+}
+async function kvSet(key, value){
+  if(hasClaudeStorage()){
+    try{ await window.storage.set(key, value, true); return; }
+    catch(e){ /* fall through to localStorage */ }
+  }
+  try{ localStorage.setItem(key, value); } catch(e){ console.error('storage error', e); }
+}
+
+async function loadTickets(){
+  var raw = await kvGet(TICKETS_KEY);
+  try{ return raw ? JSON.parse(raw) : []; } catch(e){ return []; }
+}
+async function persistTickets(list){
+  await kvSet(TICKETS_KEY, JSON.stringify(list));
+}
+async function loadUsers(){
+  var raw = await kvGet(USERS_KEY);
+  try{ return raw ? JSON.parse(raw) : []; } catch(e){ return []; }
+}
+async function persistUsers(list){
+  await kvSet(USERS_KEY, JSON.stringify(list));
+}
+function uid(){ return 'u_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,8); }
+
+function pad(n,len){ n=String(n); while(n.length<len) n='0'+n; return n; }
+function ymd(d){ return ''+d.getFullYear()+pad(d.getMonth()+1,2)+pad(d.getDate(),2); }
+function ymo(d){ return ''+d.getFullYear()+pad(d.getMonth()+1,2); }
+function nextTicketNumber(list){
+  var today = ymd(new Date());
+  var count = list.filter(function(t){ return t.id.indexOf('-'+today+'-') !== -1; }).length;
+  return 'GEMS-'+today+'-'+pad(count+1,3);
+}
+function fmtDateTime(iso){
+  var d = new Date(iso);
+  return d.toLocaleString('en-PH',{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'});
+}
+function fmtDateOnly(iso){
+  var d = new Date(iso);
+  return d.toLocaleString('en-PH',{month:'short',day:'numeric'});
+}
+function esc(s){
+  return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function deptName(id){ var d = DEPARTMENTS.filter(function(x){return x.id===id;})[0]; return d ? d.name : id; }
+
+/* ============================================================
+   SMALL RENDER HELPERS
+============================================================ */
+function dot(color, size){
+  size = size || 7;
+  return '<span class="dot" style="background:'+color+';width:'+size+'px;height:'+size+'px;"></span>';
+}
+function statusPill(status){
+  var c = STATUS_COLOR[status] || COLORS.slate;
+  return '<span class="pill" style="background:'+c+'1f;color:'+c+';">'+dot(c)+esc(status)+'</span>';
+}
+function priorityTag(p){
+  var c = PRIORITY_COLOR[p] || COLORS.slate;
+  return '<span class="tag" style="color:'+c+';">'+dot(c)+esc(p)+'</span>';
+}
+function diamondSvg(color, size){
+  size = size || 20;
+  return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 24 24" fill="'+color+'" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L22 12L12 22L2 12L12 2Z"/></svg>';
+}
+function logoRow(darkText, big){
+  var titleSize = big ? 34 : 22;
+  var subSize = big ? 12 : 9;
+  return ''
+    + '<div class="logo-row '+(darkText?'dark-text':'light-text')+'">'
+    +   diamondSvg(COLORS.ruby, titleSize*0.65)
+    +   '<div>'
+    +     '<div class="logo-title" style="font-size:'+titleSize+'px;">GEMS</div>'
+    +     '<div class="logo-sub" style="font-size:'+subSize+'px;">SERVICE DESK</div>'
+    +   '</div>'
+    + '</div>';
+}
+function iconRefresh(size,color){ return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 24 24" fill="none" stroke="'+color+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>'; }
+function iconLogout(size,color){ return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 24 24" fill="none" stroke="'+color+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>'; }
+function iconSearch(size,color){ return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 24 24" fill="none" stroke="'+color+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>'; }
+function iconCalendar(size,color){ return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 24 24" fill="none" stroke="'+color+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>'; }
+function iconEye(size,color){ return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 24 24" fill="none" stroke="'+color+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>'; }
+function iconEyeOff(size,color){ return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 24 24" fill="none" stroke="'+color+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a18.6 18.6 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>'; }
+function iconUserPlus(size,color){ return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 24 24" fill="none" stroke="'+color+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="17" y1="11" x2="23" y2="11"/></svg>'; }
+function iconUsers(size,color){ return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 24 24" fill="none" stroke="'+color+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>'; }
+function iconBox(size,color){ return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 24 24" fill="none" stroke="'+color+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8L12 3 3 8l9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>'; }
+function iconKey(size,color){ return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 24 24" fill="none" stroke="'+color+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15" r="4"/><path d="M10.5 12.5L20 3M17 6l3 3M13.5 9.5l2.5 2.5"/></svg>'; }
+function iconBadge(size,color){ return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 24 24" fill="none" stroke="'+color+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2.5"/><path d="M5 17c.7-2 2.4-3 4-3s3.3 1 4 3"/><line x1="14" y1="8" x2="18" y2="8"/><line x1="14" y1="12" x2="18" y2="12"/></svg>'; }
+
+/* ============================================================
+   ROOT RENDER
+============================================================ */
+function render(){
+  var root = document.getElementById('root');
+  root.innerHTML = session ? appShellHtml() : loginHtml();
+  if(session){
+    renderContent();
+    if(activeTicketId) renderModal();
+  } else {
+    wireLoginEvents();
+  }
+}
+
+/* ============================================================
+   LOGIN SCREEN
+============================================================ */
+function loginHtml(){
+  var deptItems = DEPARTMENTS.map(function(d){
+    return '<button type="button" class="dept-item" onclick="chooseDept(\''+d.id+'\')">'+esc(d.name)+(d.isAdmin?(' '+dot(COLORS.ruby)):'')+'</button>';
+  }).join('');
+
+  return ''
+  + '<div class="login-wrap">'
+  +   '<div class="login-inner">'
+  +     logoRow(true, true)
+  +     '<div class="login-card">'
+  +       '<h1>SIGN IN TO THE DESK</h1>'
+  +       '<p class="sub">Choose your department, then sign in with your IT-issued credentials.</p>'
+  +       '<form id="login-form">'
+  +         '<div class="form-row dept-select">'
+  +           '<label class="field-label">Department</label>'
+  +           '<button type="button" id="dept-btn" class="dept-btn" onclick="toggleDeptList()">'
+  +             '<span id="dept-btn-label">Select a department&hellip;</span>'
+  +             '<span>&#9662;</span>'
+  +           '</button>'
+  +           '<div id="dept-list" class="dept-list">'+deptItems+'</div>'
+  +         '</div>'
+  +         '<div class="form-row">'
+  +           '<label class="field-label">Username</label>'
+  +           '<input class="input" id="login-user" type="text" placeholder="Select a department first" disabled>'
+  +         '</div>'
+  +         '<div class="form-row">'
+  +           '<label class="field-label">Password</label>'
+  +           '<input class="input" id="login-pass" type="password" placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;" disabled>'
+  +         '</div>'
+  +         '<div id="login-error" class="err-box"></div>'
+  +         '<button type="submit" class="btn btn-dark" style="width:100%;justify-content:center;font-family:var(--font-display);letter-spacing:.04em;font-size:15px;">LOG IN</button>'
+  +       '</form>'
+  +       '<div id="login-hint" class="hint-box"></div>'
+  +     '</div>'
+  +     '<p class="login-footer">GEMS Group of Companies &middot; Internal IT Service Desk</p>'
+  +   '</div>'
+  + '</div>';
+}
+
+function toggleDeptList(){
+  document.getElementById('dept-list').classList.toggle('show');
+  document.getElementById('dept-btn').classList.toggle('open');
+}
+function chooseDept(id){
+  selectedDeptId = id;
+  var d = DEPARTMENTS.filter(function(x){ return x.id===id; })[0];
+  document.getElementById('dept-btn-label').textContent = d.name;
+  document.getElementById('dept-btn').classList.add('chosen');
+  document.getElementById('dept-list').classList.remove('show');
+  document.getElementById('dept-btn').classList.remove('open');
+
+  var u = document.getElementById('login-user');
+  var p = document.getElementById('login-pass');
+  u.disabled = false; p.disabled = false;
+  var deptUsers = users.filter(function(x){ return x.deptId===id; });
+  u.placeholder = deptUsers[0] ? deptUsers[0].username : 'username';
+  u.value = '';
+  p.value = '';
+  document.getElementById('login-error').classList.remove('show');
+
+  var hint = document.getElementById('login-hint');
+  if(deptUsers.length===0){
+    hint.innerHTML = 'No accounts exist yet for '+esc(d.name)+'. Ask IT to create one from User Management.';
+  } else {
+    hint.innerHTML = 'Prototype demo &mdash; account on file for '+esc(d.name)+': <b style="color:var(--ink)">'+esc(deptUsers[0].username)+'</b> / <b style="color:var(--ink)">'+esc(deptUsers[0].password)+'</b>';
+  }
+  hint.classList.add('show');
+}
+function wireLoginEvents(){
+  var form = document.getElementById('login-form');
+  form.addEventListener('submit', function(e){
+    e.preventDefault();
+    var errBox = document.getElementById('login-error');
+    if(!selectedDeptId){
+      errBox.textContent = 'Select your department first.';
+      errBox.classList.add('show');
+      return;
+    }
+    var d = DEPARTMENTS.filter(function(x){ return x.id===selectedDeptId; })[0];
+    var u = document.getElementById('login-user').value.trim();
+    var p = document.getElementById('login-pass').value;
+    var match = users.filter(function(x){ return x.deptId===d.id && x.username===u && x.password===p; })[0];
+    if(!match){
+      errBox.textContent = 'Incorrect username or password for this department.';
+      errBox.classList.add('show');
+      return;
+    }
+    errBox.classList.remove('show');
+    session = { department:d.name, deptId:d.id, username:u, isAdmin: !!d.isAdmin, userId:match.id };
+    view = 'dashboard';
+    activeTicketId = null;
+    selectedDeptId = null;
+    render();
+    refresh();
+  });
+  document.addEventListener('click', function(e){
+    var wrap = document.querySelector('.dept-select');
+    if(wrap && !wrap.contains(e.target)){
+      var list = document.getElementById('dept-list');
+      var btn = document.getElementById('dept-btn');
+      if(list){ list.classList.remove('show'); }
+      if(btn){ btn.classList.remove('open'); }
+    }
+  }, true);
+}
+
+/* ============================================================
+   APP SHELL
+============================================================ */
+function appShellHtml(){
+  var openCount = session.isAdmin ? tickets.filter(function(t){ return t.status==='Open' || t.status==='In Review'; }).length : 0;
+  function typeOpenCount(rt){
+    return tickets.filter(function(t){ return (t.requestType||'issue')===rt && (t.status==='Open' || t.status==='In Review'); }).length;
+  }
+  var deviceOpenCount = session.isAdmin ? typeOpenCount('device') : 0;
+  var accessOpenCount = session.isAdmin ? typeOpenCount('access') : 0;
+  var hireOpenCount = session.isAdmin ? typeOpenCount('newhire') : 0;
+
+  function navItem(key, label, iconSvg, badge){
+    var active = view===key;
+    return '<button class="nav-item'+(active?' active':'')+'" onclick="setView(\''+key+'\')">'
+      + '<span class="nav-left">'+iconSvg+esc(label)+'</span>'
+      + (badge>0 ? '<span class="nav-badge">'+badge+'</span>' : '')
+      + '</button>';
+  }
+  var iconDash = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>';
+  var iconPlus = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>';
+  var iconList = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>';
+  var iconShield = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-4z"/></svg>';
+  var iconBar = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>';
+
+  var navHtml = navItem('dashboard','Dashboard',iconDash,0);
+  if(!session.isAdmin){
+    navHtml += navItem('new','Report an issue',iconPlus,0);
+    navHtml += navItem('newDevice','Device request',iconBox('16','currentColor'),0);
+    navHtml += navItem('newAccess','Password / access request',iconKey('16','currentColor'),0);
+    if(session.deptId==='hr'){
+      navHtml += navItem('newHire','New hire announcement',iconBadge('16','currentColor'),0);
+    }
+    navHtml += '<div class="nav-divider"></div>';
+    navHtml += navItem('mine',"My department's requests",iconList,0);
+  } else {
+    navHtml += navItem('review','Review queue',iconShield,openCount);
+    navHtml += navItem('all','All tickets',iconList,0);
+    navHtml += '<div class="nav-divider"></div>';
+    navHtml += navItem('deviceRequests','Device requests',iconBox('16','currentColor'),deviceOpenCount);
+    navHtml += navItem('accessRequests','Password / access',iconKey('16','currentColor'),accessOpenCount);
+    navHtml += navItem('newHires','New hire setups',iconBadge('16','currentColor'),hireOpenCount);
+    navHtml += '<div class="nav-divider"></div>';
+    navHtml += navItem('reports','Reports',iconBar,0);
+    navHtml += navItem('users','User management',iconUsers('16','currentColor'),0);
+  }
+
+  return ''
+  + '<div class="app-shell">'
+  +   '<aside class="sidebar">'
+  +     logoRow(true,false)
+  +     '<nav class="nav">'+navHtml+'</nav>'
+  +     '<div class="side-user">'
+  +       '<div class="d">'+esc(session.department)+'</div>'
+  +       '<div class="u">'+esc(session.username)+'</div>'
+  +       '<button onclick="logout()">'+iconLogout(12,COLORS.ruby)+' Log out</button>'
+  +     '</div>'
+  +   '</aside>'
+  +   '<main class="main">'
+  +     '<div class="topbar">'
+  +       '<div class="tb-left">GEMS Group of Companies &middot; Internal IT Service Desk</div>'
+  +       '<button class="tb-refresh" onclick="refresh()">'+iconRefresh(13,COLORS.slate)+' Refresh</button>'
+  +     '</div>'
+  +     '<div class="content" id="content"></div>'
+  +   '</main>'
+  +   '<div id="modal-root"></div>'
+  + '</div>';
+}
+
+function setView(v){ view = v; editingUserId = null; renderContent(); }
+function logout(){ session=null; tickets=[]; view='dashboard'; activeTicketId=null; render(); }
+
+async function refresh(){
+  tickets = await loadTickets();
+  users = await loadUsers();
+  render();
+}
+
+/* ============================================================
+   CONTENT ROUTER
+============================================================ */
+function renderContent(){
+  var el = document.getElementById('content');
+  if(!el) return;
+  if(view==='dashboard') el.innerHTML = dashboardHtml();
+  else if(view==='new') el.innerHTML = newTicketHtml();
+  else if(view==='newDevice') el.innerHTML = deviceRequestHtml();
+  else if(view==='newAccess') el.innerHTML = accessRequestHtml();
+  else if(view==='newHire') el.innerHTML = newHireHtml();
+  else if(view==='mine') el.innerHTML = listHtml({title:"My department's tickets", eyebrow:'Traceable by ticket #', scopeDept:true, filters:true});
+  else if(view==='review') el.innerHTML = listHtml({title:'Tickets awaiting IT action', eyebrow:'Approve, reject, or route', onlyOpenReview:true, filters:true});
+  else if(view==='all') el.innerHTML = listHtml({title:'All tickets', eyebrow:'Every department', filters:true});
+  else if(view==='deviceRequests') el.innerHTML = listHtml({title:'Device requests', eyebrow:'Printers, PCs, laptops & peripherals', requestType:'device', filters:true});
+  else if(view==='accessRequests') el.innerHTML = listHtml({title:'Password & access requests', eyebrow:'Password resets and shared folder / system access', requestType:'access', filters:true});
+  else if(view==='newHires') el.innerHTML = listHtml({title:'New hire setups', eyebrow:'Reported by HR for IT provisioning', requestType:'newhire', filters:true});
+  else if(view==='reports') el.innerHTML = reportsHtml();
+  else if(view==='users') el.innerHTML = usersHtml();
+
+  wireContentEvents();
+}
+
+/* ============================================================
+   DASHBOARD
+============================================================ */
+function dashboardHtml(){
+  var mine = session.isAdmin ? tickets : tickets.filter(function(t){ return t.department===session.department; });
+  var openN = mine.filter(function(t){ return t.status==='Open'; }).length;
+  var activeN = mine.filter(function(t){ return ['In Review','Approved','In Progress'].indexOf(t.status)!==-1; }).length;
+  var resolvedN = mine.filter(function(t){ return t.status==='Resolved'; }).length;
+  var recent = mine.slice(0,5);
+
+  return ''
+  + '<div class="section-head">'
+  +   '<div><div class="eyebrow">'+(session.isAdmin?'IT overview':'Your department')+'</div><div class="h-title">Welcome, '+esc(session.department)+'</div></div>'
+  +   '<button class="btn btn-primary" onclick="setView(\''+(session.isAdmin?'review':'new')+'\')">'
+  +     '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>'
+  +     (session.isAdmin?'Review queue':'New ticket')
+  +   '</button>'
+  + '</div>'
+  + '<div class="stat-grid g3">'
+  +   statCard('Open', openN, COLORS.ruby)
+  +   statCard('In progress', activeN, COLORS.signal)
+  +   statCard('Resolved', resolvedN, COLORS.moss)
+  + '</div>'
+  + '<div class="eyebrow" style="color:var(--slate);margin-bottom:12px;">RECENT ACTIVITY</div>'
+  + '<div class="card">'
+  +   (recent.length===0
+        ? '<div class="list-empty">No tickets yet &mdash; nothing to trace.</div>'
+        : listHeaderHtml() + recent.map(rowHtml).join(''))
+  + '</div>';
+}
+function statCard(label, val, color){
+  return '<div class="card stat-card"><div class="lbl">'+dot(color)+esc(label)+'</div><div class="val">'+val+'</div></div>';
+}
+
+/* ============================================================
+   NEW TICKET
+============================================================ */
+function newTicketHtml(){
+  var priBtns = PRIORITIES.map(function(p){
+    var c = PRIORITY_COLOR[p];
+    var sel = p===newTicketPriority;
+    return '<button type="button" class="priority-btn'+(sel?' selected':'')+'" style="color:'+c+';'+(sel?('background:'+c+'1a;'):'')+'" onclick="selectPriority(\''+p+'\')">'+dot(sel?c:COLORS.slateLight)+esc(p)+'</button>';
+  }).join('');
+  var catOpts = CATEGORIES.map(function(c){ return '<option>'+esc(c)+'</option>'; }).join('');
+
+  return ''
+  + '<div class="section-head"><div><div class="eyebrow">Report an incident</div><div class="h-title">Submit a new ticket</div></div></div>'
+  + '<div id="ticket-success"></div>'
+  + '<form id="new-ticket-form" class="card form-card">'
+  +   '<div class="form-row"><label class="field-label">Subject</label><input class="input" id="t-subject" placeholder="Short summary of the issue" required></div>'
+  +   '<div class="grid2 form-row">'
+  +     '<div><label class="field-label">Category</label><select class="input" id="t-category">'+catOpts+'</select></div>'
+  +     '<div><label class="field-label">Priority</label><div class="priority-row" id="priority-row">'+priBtns+'</div></div>'
+  +   '</div>'
+  +   '<div class="form-row"><label class="field-label">Describe what happened</label><textarea class="input" id="t-desc" rows="5" placeholder="What is affected, when it started, and any error messages you saw." required></textarea></div>'
+  +   '<button type="submit" class="btn btn-primary" id="submit-ticket-btn">'
+  +     '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>'
+  +     'Submit ticket'
+  +   '</button>'
+  + '</form>';
+}
+function selectPriority(p){
+  newTicketPriority = p;
+  document.querySelectorAll('.priority-btn').forEach(function(btn, i){
+    var pr = PRIORITIES[i];
+    var c = PRIORITY_COLOR[pr];
+    var sel = pr===p;
+    btn.classList.toggle('selected', sel);
+    btn.style.background = sel ? (c+'1a') : 'transparent';
+    btn.innerHTML = dot(sel?c:COLORS.slateLight)+esc(pr);
+  });
+}
+
+/* ============================================================
+   DEVICE REQUEST (Hardware / equipment)
+============================================================ */
+function deviceRequestHtml(){
+  var typeOpts = DEVICE_TYPES.map(function(d){ return '<option>'+esc(d)+'</option>'; }).join('');
+  var priBtns = PRIORITIES.map(function(p){
+    var c = PRIORITY_COLOR[p];
+    var sel = p===newDevicePriority;
+    return '<button type="button" class="priority-btn'+(sel?' selected':'')+'" style="color:'+c+';'+(sel?('background:'+c+'1a;'):'')+'" onclick="selectDevicePriority(\''+p+'\')">'+dot(sel?c:COLORS.slateLight)+esc(p)+'</button>';
+  }).join('');
+
+  return ''
+  + '<div class="section-head"><div><div class="eyebrow">Equipment &amp; peripherals</div><div class="h-title">Request a device</div></div></div>'
+  + '<div id="device-success"></div>'
+  + '<form id="new-device-form" class="card form-card">'
+  +   '<div class="grid2 form-row">'
+  +     '<div><label class="field-label">Device type</label><select class="input" id="d-type">'+typeOpts+'</select></div>'
+  +     '<div><label class="field-label">Quantity</label><input class="input" id="d-qty" type="number" min="1" value="1" required></div>'
+  +   '</div>'
+  +   '<div class="grid2 form-row">'
+  +     '<div><label class="field-label">For (employee name / position)</label><input class="input" id="d-for" placeholder="e.g. Juan Dela Cruz, Warehouse Checker"></div>'
+  +     '<div><label class="field-label">Needed by</label><input class="input" id="d-needed" type="date"></div>'
+  +   '</div>'
+  +   '<div class="form-row"><label class="field-label">Priority</label><div class="priority-row" id="device-priority-row">'+priBtns+'</div></div>'
+  +   '<div class="form-row"><label class="field-label">Justification / details</label><textarea class="input" id="d-desc" rows="4" placeholder="Why this device is needed, current condition of existing unit, etc." required></textarea></div>'
+  +   '<button type="submit" class="btn btn-primary" id="submit-device-btn">'
+  +     '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>'
+  +     'Submit request'
+  +   '</button>'
+  + '</form>';
+}
+function selectDevicePriority(p){
+  newDevicePriority = p;
+  var row = document.getElementById('device-priority-row');
+  if(!row) return;
+  row.querySelectorAll('.priority-btn').forEach(function(btn, i){
+    var pr = PRIORITIES[i];
+    var c = PRIORITY_COLOR[pr];
+    var sel = pr===p;
+    btn.classList.toggle('selected', sel);
+    btn.style.background = sel ? (c+'1a') : 'transparent';
+    btn.innerHTML = dot(sel?c:COLORS.slateLight)+esc(pr);
+  });
+}
+
+/* ============================================================
+   ACCESS / PASSWORD REQUEST
+============================================================ */
+function accessRequestHtml(){
+  var typeOpts = ACCESS_TYPES.map(function(a){ return '<option>'+esc(a)+'</option>'; }).join('');
+  var priBtns = PRIORITIES.map(function(p){
+    var c = PRIORITY_COLOR[p];
+    var sel = p===newAccessPriority;
+    return '<button type="button" class="priority-btn'+(sel?' selected':'')+'" style="color:'+c+';'+(sel?('background:'+c+'1a;'):'')+'" onclick="selectAccessPriority(\''+p+'\')">'+dot(sel?c:COLORS.slateLight)+esc(p)+'</button>';
+  }).join('');
+
+  return ''
+  + '<div class="section-head"><div><div class="eyebrow">Credentials &amp; permissions</div><div class="h-title">Request password reset / access</div></div></div>'
+  + '<div id="access-success"></div>'
+  + '<form id="new-access-form" class="card form-card">'
+  +   '<div class="form-row"><label class="field-label">Request type</label><select class="input" id="a-type">'+typeOpts+'</select></div>'
+  +   '<div class="form-row"><label class="field-label">System, folder, or account name</label><input class="input" id="a-target" placeholder="e.g. Accounting Shared Folder, SAP B1, Outlook" required></div>'
+  +   '<div class="form-row"><label class="field-label">Priority</label><div class="priority-row" id="access-priority-row">'+priBtns+'</div></div>'
+  +   '<div class="form-row"><label class="field-label">Reason for request</label><textarea class="input" id="a-desc" rows="4" placeholder="What you need access to, or why the password needs to be reset." required></textarea></div>'
+  +   '<button type="submit" class="btn btn-primary" id="submit-access-btn">'
+  +     '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>'
+  +     'Submit request'
+  +   '</button>'
+  + '</form>';
+}
+function selectAccessPriority(p){
+  newAccessPriority = p;
+  var row = document.getElementById('access-priority-row');
+  if(!row) return;
+  row.querySelectorAll('.priority-btn').forEach(function(btn, i){
+    var pr = PRIORITIES[i];
+    var c = PRIORITY_COLOR[pr];
+    var sel = pr===p;
+    btn.classList.toggle('selected', sel);
+    btn.style.background = sel ? (c+'1a') : 'transparent';
+    btn.innerHTML = dot(sel?c:COLORS.slateLight)+esc(pr);
+  });
+}
+
+/* ============================================================
+   NEW HIRE ANNOUNCEMENT (HR only)
+============================================================ */
+function newHireHtml(){
+  var deptOpts = DEPARTMENTS.filter(function(d){ return !d.isAdmin; }).map(function(d){ return '<option>'+esc(d.name)+'</option>'; }).join('');
+  var priBtns = PRIORITIES.map(function(p){
+    var c = PRIORITY_COLOR[p];
+    var sel = p===newHirePriority;
+    return '<button type="button" class="priority-btn'+(sel?' selected':'')+'" style="color:'+c+';'+(sel?('background:'+c+'1a;'):'')+'" onclick="selectHirePriority(\''+p+'\')">'+dot(sel?c:COLORS.slateLight)+esc(p)+'</button>';
+  }).join('');
+  var equipBoxes = EQUIPMENT_OPTIONS.map(function(eq, i){
+    var checked = newHireEquipment.indexOf(eq)!==-1;
+    return '<label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--ink);padding:6px 0;">'
+      + '<input type="checkbox" class="hire-equip-cb" value="'+esc(eq)+'"'+(checked?' checked':'')+' onchange="toggleHireEquip(this)"> '+esc(eq)
+      + '</label>';
+  }).join('');
+
+  return ''
+  + '<div class="section-head"><div><div class="eyebrow">HR &rarr; IT provisioning</div><div class="h-title">Announce a new hire</div></div></div>'
+  + '<div id="hire-success"></div>'
+  + '<form id="new-hire-form" class="card form-card">'
+  +   '<div class="grid2 form-row">'
+  +     '<div><label class="field-label">Employee name</label><input class="input" id="h-name" placeholder="Full name" required></div>'
+  +     '<div><label class="field-label">Position</label><input class="input" id="h-position" placeholder="Job title" required></div>'
+  +   '</div>'
+  +   '<div class="grid2 form-row">'
+  +     '<div><label class="field-label">Assigned department</label><select class="input" id="h-dept">'+deptOpts+'</select></div>'
+  +     '<div><label class="field-label">Start date</label><input class="input" id="h-start" type="date" required></div>'
+  +   '</div>'
+  +   '<div class="form-row"><label class="field-label">Priority</label><div class="priority-row" id="hire-priority-row">'+priBtns+'</div></div>'
+  +   '<div class="form-row"><label class="field-label">Equipment / accounts to set up</label>'
+  +     '<div class="card" style="padding:10px 16px;border-color:var(--line-soft);">'+equipBoxes+'</div>'
+  +   '</div>'
+  +   '<div class="form-row"><label class="field-label">Additional notes</label><textarea class="input" id="h-notes" rows="3" placeholder="Seating, reporting manager, anything else IT should know."></textarea></div>'
+  +   '<button type="submit" class="btn btn-primary" id="submit-hire-btn">'
+  +     '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>'
+  +     'Notify IT'
+  +   '</button>'
+  + '</form>';
+}
+function selectHirePriority(p){
+  newHirePriority = p;
+  var row = document.getElementById('hire-priority-row');
+  if(!row) return;
+  row.querySelectorAll('.priority-btn').forEach(function(btn, i){
+    var pr = PRIORITIES[i];
+    var c = PRIORITY_COLOR[pr];
+    var sel = pr===p;
+    btn.classList.toggle('selected', sel);
+    btn.style.background = sel ? (c+'1a') : 'transparent';
+    btn.innerHTML = dot(sel?c:COLORS.slateLight)+esc(pr);
+  });
+}
+function toggleHireEquip(cb){
+  var v = cb.value;
+  var idx = newHireEquipment.indexOf(v);
+  if(cb.checked && idx===-1) newHireEquipment.push(v);
+  if(!cb.checked && idx!==-1) newHireEquipment.splice(idx,1);
+}
+
+/* ============================================================
+   TICKET LIST
+============================================================ */
+function listHeaderHtml(){
+  return '<div class="list-header"><div>Ticket #</div><div>Subject</div><div>Department</div><div>Priority</div><div>Status</div><div class="right">Filed</div></div>';
+}
+function rowHtml(t){
+  var rt = t.requestType||'issue';
+  var typeTag = rt!=='issue' ? '<span class="cat-chip" style="margin-left:8px;font-size:10.5px;padding:2px 8px;">'+esc(REQUEST_TYPE_LABEL[rt]||rt)+'</span>' : '';
+  return '<button class="list-row" onclick="openTicket(\''+t.id+'\')">'
+    + '<div class="mono" style="font-size:12.5px;font-weight:600;">'+esc(t.id)+'</div>'
+    + '<div class="truncate" style="font-weight:600;font-size:14px;">'+esc(t.subject)+typeTag+'</div>'
+    + '<div style="font-size:12px;color:var(--slate);">'+esc(t.department)+'</div>'
+    + '<div>'+priorityTag(t.priority)+'</div>'
+    + '<div>'+statusPill(t.status)+'</div>'
+    + '<div class="right" style="font-size:12px;color:var(--slate-light);">'+fmtDateOnly(t.createdAt)+'</div>'
+    + '</button>';
+}
+function currentListSource(opts){
+  var src = tickets;
+  if(opts.scopeDept) src = src.filter(function(t){ return t.department===session.department; });
+  if(opts.onlyOpenReview) src = src.filter(function(t){ return t.status==='Open' || t.status==='In Review'; });
+  if(opts.requestType) src = src.filter(function(t){ return (t.requestType||'issue')===opts.requestType; });
+  return src;
+}
+function listHtml(opts){
+  window.__listOpts = opts;
+  var deptOpts = DEPARTMENTS.filter(function(d){ return !d.isAdmin; }).map(function(d){ return '<option>'+esc(d.name)+'</option>'; }).join('');
+  var statusOpts = STATUS_FLOW.map(function(s){ return '<option>'+esc(s)+'</option>'; }).join('');
+
+  var filtersHtml = '';
+  if(opts.filters){
+    filtersHtml = '<div class="filters">'
+      + '<div class="search-box">'+iconSearch(14,COLORS.slateLight)+'<input id="f-search" placeholder="Search ticket # or subject"></div>'
+      + '<select id="f-status"><option>All</option>'+statusOpts+'</select>'
+      + (opts.scopeDept ? '' : '<select id="f-dept"><option>All</option>'+deptOpts+'</select>')
+      + '</div>';
+  }
+
+  return ''
+  + '<div class="section-head"><div><div class="eyebrow">'+esc(opts.eyebrow)+'</div><div class="h-title">'+esc(opts.title)+'</div></div></div>'
+  + filtersHtml
+  + '<div class="card" id="list-body">'+listBodyHtml(opts)+'</div>';
+}
+function listBodyHtml(opts){
+  var src = currentListSource(opts);
+  var q = (document.getElementById('f-search') && document.getElementById('f-search').value || '').toLowerCase();
+  var st = document.getElementById('f-status') ? document.getElementById('f-status').value : 'All';
+  var dp = document.getElementById('f-dept') ? document.getElementById('f-dept').value : 'All';
+
+  var filtered = src.filter(function(t){
+    if(st!=='All' && t.status!==st) return false;
+    if(dp && dp!=='All' && t.department!==dp) return false;
+    if(q && (t.id+' '+t.subject).toLowerCase().indexOf(q)===-1) return false;
+    return true;
+  });
+
+  if(filtered.length===0) return '<div class="list-empty">No tickets match here yet.</div>';
+  return listHeaderHtml() + filtered.map(rowHtml).join('');
+}
+function refilterList(){
+  var body = document.getElementById('list-body');
+  if(body && window.__listOpts) body.innerHTML = listBodyHtml(window.__listOpts);
+}
+
+/* ============================================================
+   REPORTS
+============================================================ */
+function reportsHtml(){
+  var now = new Date();
+  var scoped = tickets.filter(function(t){
+    var created = new Date(t.createdAt);
+    return reportScope==='day' ? ymd(created)===ymd(now) : ymo(created)===ymo(now);
+  });
+
+  var byStatus = STATUS_FLOW.map(function(s){ return { s:s, n:scoped.filter(function(t){ return t.status===s; }).length }; });
+  var byDept = DEPARTMENTS.filter(function(d){ return !d.isAdmin; }).map(function(d){
+    return { d:d.name, n:scoped.filter(function(t){ return t.department===d.name; }).length };
+  }).filter(function(x){ return x.n>0; });
+
+  var statusBars = byStatus.map(function(o){
+    var pct = scoped.length ? (o.n/scoped.length*100) : 0;
+    return '<div class="bar-row"><div class="lab">'+esc(o.s)+'</div><div class="bar-track"><div class="bar-fill" style="width:'+pct+'%;background:'+STATUS_COLOR[o.s]+';"></div></div><div class="bar-n">'+o.n+'</div></div>';
+  }).join('');
+
+  var deptBars = byDept.length===0
+    ? '<div class="list-empty" style="padding:24px 0;">No filings in this scope.</div>'
+    : byDept.map(function(o){
+        var pct = scoped.length ? (o.n/scoped.length*100) : 0;
+        return '<div class="bar-row"><div class="lab">'+esc(o.d)+'</div><div class="bar-track"><div class="bar-fill" style="width:'+pct+'%;background:'+COLORS.ruby+';"></div></div><div class="bar-n">'+o.n+'</div></div>';
+      }).join('');
+
+  var scopedRows = scoped.length===0
+    ? '<div class="list-empty">Nothing filed in this window.</div>'
+    : scoped.map(function(t){
+        return '<div class="list-row" style="cursor:default;">'
+          + '<div class="mono" style="font-size:12.5px;font-weight:600;">'+esc(t.id)+'</div>'
+          + '<div class="truncate" style="font-weight:600;font-size:14px;">'+esc(t.subject)+'</div>'
+          + '<div style="font-size:12px;color:var(--slate);">'+esc(t.department)+'</div>'
+          + '<div></div>'
+          + '<div>'+statusPill(t.status)+'</div>'
+          + '<div class="right" style="font-size:12px;color:var(--slate-light);">'+fmtDateTime(t.createdAt)+'</div>'
+          + '</div>';
+      }).join('');
+
+  return ''
+  + '<div class="section-head">'
+  +   '<div><div class="eyebrow">Trace &amp; audit</div><div class="h-title">Incident reports</div></div>'
+  +   '<div class="scope-toggle">'
+  +     '<button class="'+(reportScope==='day'?'active':'')+'" onclick="setReportScope(\'day\')">'+iconCalendar(12,reportScope==='day'?'#fff':COLORS.slate)+'Today</button>'
+  +     '<button class="'+(reportScope==='month'?'active':'')+'" onclick="setReportScope(\'month\')">'+iconCalendar(12,reportScope==='month'?'#fff':COLORS.slate)+'This month</button>'
+  +   '</div>'
+  + '</div>'
+  + '<div class="stat-grid g4">'
+  +   statCard('Total filed', scoped.length, COLORS.ink)
+  +   statCard('Open', scoped.filter(function(t){return t.status==='Open';}).length, COLORS.ruby)
+  +   statCard('In progress', scoped.filter(function(t){return ['In Review','Approved','In Progress'].indexOf(t.status)!==-1;}).length, COLORS.signal)
+  +   statCard('Resolved', scoped.filter(function(t){return t.status==='Resolved';}).length, COLORS.moss)
+  + '</div>'
+  + '<div class="grid2" style="margin-bottom:24px;">'
+  +   '<div class="card" style="padding:16px;"><div class="eyebrow" style="color:var(--slate);margin-bottom:12px;">BY STATUS</div>'+statusBars+'</div>'
+  +   '<div class="card" style="padding:16px;"><div class="eyebrow" style="color:var(--slate);margin-bottom:12px;">BY DEPARTMENT</div>'+deptBars+'</div>'
+  + '</div>'
+  + '<div class="eyebrow" style="color:var(--slate);margin-bottom:12px;">TICKETS IN SCOPE ('+scoped.length+')</div>'
+  + '<div class="card">'+scopedRows+'</div>';
+}
+function setReportScope(s){ reportScope = s; renderContent(); }
+
+/* ============================================================
+   TICKET DETAIL MODAL
+============================================================ */
+function requestDetailsHtml(t){
+  var rt = t.requestType||'issue';
+  if(rt==='issue' || !t.details) return '';
+  var rows = [];
+  if(rt==='device'){
+    rows = [
+      ['Device type', t.details.deviceType],
+      ['Quantity', t.details.quantity],
+      ['For', t.details.forWhom || '—'],
+      ['Needed by', t.details.neededBy ? fmtDateOnly(t.details.neededBy+'T00:00:00') : '—']
+    ];
+  } else if(rt==='access'){
+    rows = [
+      ['Request type', t.details.accessType],
+      ['System / folder / account', t.details.target]
+    ];
+  } else if(rt==='newhire'){
+    rows = [
+      ['Employee name', t.details.employeeName],
+      ['Position', t.details.position],
+      ['Assigned department', t.details.assignedDept],
+      ['Start date', t.details.startDate ? fmtDateOnly(t.details.startDate+'T00:00:00') : '—'],
+      ['Equipment / accounts', (t.details.equipment && t.details.equipment.length) ? t.details.equipment.join(', ') : 'None specified']
+    ];
+  }
+  var grid = rows.map(function(r){
+    return '<div><div class="k">'+esc(r[0])+'</div><div class="v">'+esc(r[1]||'—')+'</div></div>';
+  }).join('');
+  return '<div class="eyebrow" style="color:var(--slate);margin-bottom:10px;">'+esc(REQUEST_TYPE_LABEL[rt])+' DETAILS</div>'
+    + '<div class="meta-grid" style="margin-bottom:20px;">'+grid+'</div>';
+}
+function openTicket(id){ activeTicketId = id; modalStatus = null; renderModal(); }
+function closeModal(){ activeTicketId = null; document.getElementById('modal-root').innerHTML = ''; }
+
+function renderModal(){
+  var root = document.getElementById('modal-root');
+  var t = tickets.filter(function(x){ return x.id===activeTicketId; })[0];
+  if(!t){ root.innerHTML=''; return; }
+  if(!modalStatus) modalStatus = t.status;
+
+  var history = t.history.map(function(h){
+    var c = STATUS_COLOR[h.status] || COLORS.slate;
+    return '<div class="activity-item">'+dot(c)+'<div><div class="txt"><b>'+esc(h.status)+'</b> &mdash; '+esc(h.note)+'</div><div class="who">'+esc(h.by)+' &middot; '+fmtDateTime(h.at)+'</div></div></div>';
+  }).join('');
+
+  var itAction = '';
+  if(session.isAdmin){
+    var quickRow = '';
+    if(t.status==='Open' || t.status==='In Review'){
+      quickRow = '<div class="quick-row">'
+        + '<button type="button" class="btn btn-primary" onclick="quickSetStatus(\'Approved\')">Approve</button>'
+        + '<button type="button" class="btn btn-muted" onclick="quickSetStatus(\'Rejected\')">Reject</button>'
+        + '</div>';
+    }
+    var statusBtns = STATUS_FLOW.map(function(s){
+      var c = STATUS_COLOR[s];
+      var sel = s===modalStatus;
+      return '<button type="button" class="status-btn'+(sel?' selected':'')+'" style="color:'+c+';'+(sel?('background:'+c+'1a;'):'')+'" onclick="setModalStatus(\''+s+'\')">'+esc(s)+'</button>';
+    }).join('');
+    itAction = ''
+      + '<div class="it-action">'
+      +   '<div class="eyebrow" style="color:var(--slate);margin-bottom:12px;">IT ACTION</div>'
+      +   quickRow
+      +   '<div class="status-flow" id="status-flow">'+statusBtns+'</div>'
+      +   '<textarea class="input" id="modal-note" rows="3" placeholder="Remarks for this update (visible to the department)&hellip;" style="margin-bottom:12px;"></textarea>'
+      +   '<button class="btn btn-dark" id="modal-save-btn" onclick="saveTicketUpdate()">'
+      +     '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>'
+      +     'Update ticket'
+      +   '</button>'
+      + '</div>';
+  } else {
+    itAction = '<div class="readonly-note">Only the IT team can change ticket status. You\'ll see updates here as they happen.</div>';
+  }
+
+  root.innerHTML = ''
+  + '<div class="modal-overlay show" onclick="if(event.target===this) closeModal()">'
+  +   '<div class="modal-panel">'
+  +     '<div class="modal-top"><div class="mono" style="font-size:13px;font-weight:700;color:var(--ruby);">'+esc(t.id)+'</div><button class="modal-close" onclick="closeModal()">Close &times;</button></div>'
+  +     '<div class="modal-subject">'+esc(t.subject)+'</div>'
+  +     '<div class="badge-row">'+statusPill(t.status)+priorityTag(t.priority)+'<span class="cat-chip">'+esc(t.category)+'</span></div>'
+  +     '<div class="meta-grid">'
+  +       '<div><div class="k">Department</div><div class="v">'+esc(t.department)+'</div></div>'
+  +       '<div><div class="k">Submitted by</div><div class="v">'+esc(t.submittedBy)+'</div></div>'
+  +       '<div><div class="k">Filed</div><div class="v">'+fmtDateTime(t.createdAt)+'</div></div>'
+  +     '</div>'
+  +     requestDetailsHtml(t)
+  +     '<div class="desc-box">'+esc(t.description)+'</div>'
+  +     '<div class="activity-title">ACTIVITY</div>'
+  +     '<div style="margin-bottom:20px;">'+history+'</div>'
+  +     itAction
+  +   '</div>'
+  + '</div>';
+}
+function setModalStatus(s){
+  modalStatus = s;
+  document.querySelectorAll('#status-flow .status-btn').forEach(function(btn){
+    var label = btn.textContent.trim();
+    var c = STATUS_COLOR[label];
+    var sel = label===s;
+    btn.classList.toggle('selected', sel);
+    btn.style.background = sel ? (c+'1a') : 'transparent';
+  });
+}
+function quickSetStatus(s){
+  setModalStatus(s);
+  var note = document.getElementById('modal-note');
+  if(note) note.focus();
+}
+async function saveTicketUpdate(){
+  var btn = document.getElementById('modal-save-btn');
+  btn.disabled = true;
+  var note = document.getElementById('modal-note').value.trim();
+  var current = await loadTickets();
+  var now = new Date().toISOString();
+  var updated = current.map(function(t){
+    if(t.id!==activeTicketId) return t;
+    var h = t.history.slice();
+    h.push({ status:modalStatus, note: note || ('Status changed to '+modalStatus+'.'), by:session.username, at:now });
+    return Object.assign({}, t, { status:modalStatus, history:h });
+  });
+  await persistTickets(updated);
+  tickets = updated;
+  btn.disabled = false;
+  renderModal();
+  renderContent();
+}
+
+/* ============================================================
+   USER MANAGEMENT (IT only)
+============================================================ */
+function usersHtml(){
+  var deptOpts = DEPARTMENTS.map(function(d){ return '<option value="'+d.id+'">'+esc(d.name)+'</option>'; }).join('');
+
+  return ''
+  + '<div class="section-head"><div><div class="eyebrow">IT administration</div><div class="h-title">User management</div></div></div>'
+  + '<p class="u-note">Create the login for each department, and update usernames or passwords whenever they need to change.</p>'
+  + '<div class="card add-user-card">'
+  +   '<div class="add-user-grid">'
+  +     '<div><label class="field-label">Department</label><select class="input" id="nu-dept">'+deptOpts+'</select></div>'
+  +     '<div><label class="field-label">Username</label><input class="input" id="nu-user" placeholder="e.g. sales2"></div>'
+  +     '<div><label class="field-label">Password</label><input class="input" id="nu-pass" placeholder="Set a password"></div>'
+  +     '<button class="btn btn-primary" id="add-user-btn" onclick="addUser()">'+iconUserPlus(15,'#fff')+'Add user</button>'
+  +   '</div>'
+  +   '<div class="u-err" id="add-user-err"></div>'
+  + '</div>'
+  + '<div class="card" id="user-table">'+userTableHtml()+'</div>';
+}
+
+function userTableHtml(){
+  if(users.length===0) return '<div class="list-empty">No accounts yet. Add the first one above.</div>';
+  var sorted = users.slice().sort(function(a,b){ return deptName(a.deptId).localeCompare(deptName(b.deptId)); });
+  var header = '<div class="user-header"><div>Department</div><div>Username</div><div>Password</div><div class="right">Actions</div></div>';
+  var rows = sorted.map(function(u){
+    if(editingUserId===u.id) return userEditRowHtml(u);
+    var visible = !!pwVisible[u.id];
+    return ''
+      + '<div class="user-row">'
+      +   '<div class="dept-badge">'+esc(deptName(u.deptId))+(u.deptId==='it'?(' '+dot(COLORS.ruby)):'')+'</div>'
+      +   '<div class="mono" style="font-size:13px;">'+esc(u.username)+'</div>'
+      +   '<div class="pw-cell"><span class="mono" style="font-size:13px;">'+(visible?esc(u.password):'&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;')+'</span>'
+      +     '<button type="button" class="icon-btn" onclick="togglePw(\''+u.id+'\')">'+(visible?iconEyeOff(13,COLORS.slate):iconEye(13,COLORS.slate))+'</button></div>'
+      +   '<div class="row-actions right" style="justify-content:flex-end;display:flex;">'
+      +     '<button type="button" class="icon-btn" onclick="startEditUser(\''+u.id+'\')">Edit</button>'
+      +     '<button type="button" class="icon-btn danger" onclick="deleteUser(\''+u.id+'\')">Delete</button>'
+      +   '</div>'
+      + '</div>';
+  }).join('');
+  return header + rows;
+}
+function userEditRowHtml(u){
+  return ''
+    + '<div class="user-row">'
+    +   '<div class="dept-badge">'+esc(deptName(u.deptId))+'</div>'
+    +   '<div><input class="input-sm" id="edit-user-'+u.id+'" value="'+esc(u.username)+'"></div>'
+    +   '<div><input class="input-sm" id="edit-pass-'+u.id+'" value="'+esc(u.password)+'"></div>'
+    +   '<div class="row-actions right" style="justify-content:flex-end;display:flex;">'
+    +     '<button type="button" class="icon-btn" onclick="saveEditUser(\''+u.id+'\')">Save</button>'
+    +     '<button type="button" class="icon-btn" onclick="cancelEditUser()">Cancel</button>'
+    +   '</div>'
+    + '</div>';
+}
+function togglePw(id){ pwVisible[id] = !pwVisible[id]; document.getElementById('user-table').innerHTML = userTableHtml(); }
+function startEditUser(id){ editingUserId = id; document.getElementById('user-table').innerHTML = userTableHtml(); }
+function cancelEditUser(){ editingUserId = null; document.getElementById('user-table').innerHTML = userTableHtml(); }
+
+async function addUser(){
+  var errEl = document.getElementById('add-user-err');
+  errEl.classList.remove('show');
+  var deptId = document.getElementById('nu-dept').value;
+  var username = document.getElementById('nu-user').value.trim();
+  var password = document.getElementById('nu-pass').value;
+
+  if(!username || !password){
+    errEl.textContent = 'Enter a username and password.';
+    errEl.classList.add('show');
+    return;
+  }
+  var dup = users.filter(function(u){ return u.deptId===deptId && u.username.toLowerCase()===username.toLowerCase(); })[0];
+  if(dup){
+    errEl.textContent = 'That username already exists for this department.';
+    errEl.classList.add('show');
+    return;
+  }
+
+  var btn = document.getElementById('add-user-btn');
+  btn.disabled = true;
+  var current = await loadUsers();
+  var newUser = { id: uid(), deptId: deptId, username: username, password: password, createdAt: new Date().toISOString() };
+  var updated = current.concat([newUser]);
+  await persistUsers(updated);
+  users = updated;
+  btn.disabled = false;
+
+  document.getElementById('nu-user').value = '';
+  document.getElementById('nu-pass').value = '';
+  document.getElementById('user-table').innerHTML = userTableHtml();
+}
+
+async function saveEditUser(id){
+  var newUsername = document.getElementById('edit-user-'+id).value.trim();
+  var newPassword = document.getElementById('edit-pass-'+id).value;
+  if(!newUsername || !newPassword){ return; }
+
+  var current = await loadUsers();
+  var target = current.filter(function(u){ return u.id===id; })[0];
+  if(!target) return;
+  var dup = current.filter(function(u){ return u.id!==id && u.deptId===target.deptId && u.username.toLowerCase()===newUsername.toLowerCase(); })[0];
+  if(dup){ alert('That username already exists for this department.'); return; }
+
+  var updated = current.map(function(u){ return u.id===id ? Object.assign({}, u, { username:newUsername, password:newPassword }) : u; });
+  await persistUsers(updated);
+  users = updated;
+  editingUserId = null;
+  document.getElementById('user-table').innerHTML = userTableHtml();
+}
+
+async function deleteUser(id){
+  var target = users.filter(function(u){ return u.id===id; })[0];
+  if(!target) return;
+  if(target.deptId==='it'){
+    var adminCount = users.filter(function(u){ return u.deptId==='it'; }).length;
+    if(adminCount<=1){ alert('You can\'t delete the last IT admin account.'); return; }
+  }
+  if(!confirm('Remove the login for '+target.username+' ('+deptName(target.deptId)+')? This cannot be undone.')) return;
+
+  var current = await loadUsers();
+  var updated = current.filter(function(u){ return u.id!==id; });
+  await persistUsers(updated);
+  users = updated;
+  document.getElementById('user-table').innerHTML = userTableHtml();
+}
+
+/* ============================================================
+   EVENT WIRING FOR NEW-TICKET FORM + LIST FILTERS
+============================================================ */
+function wireContentEvents(){
+  var form = document.getElementById('new-ticket-form');
+  if(form){
+    form.addEventListener('submit', async function(e){
+      e.preventDefault();
+      var subject = document.getElementById('t-subject').value.trim();
+      var description = document.getElementById('t-desc').value.trim();
+      var category = document.getElementById('t-category').value;
+      if(!subject || !description) return;
+
+      var btn = document.getElementById('submit-ticket-btn');
+      btn.disabled = true;
+
+      var current = await loadTickets();
+      var id = nextTicketNumber(current);
+      var now = new Date().toISOString();
+      var ticket = {
+        id: id, subject: subject, category: category, priority: newTicketPriority, description: description,
+        department: session.department, submittedBy: session.username,
+        status: 'Open', createdAt: now, requestType:'issue', details:null,
+        history: [{ status:'Open', note:'Ticket submitted.', by:session.username, at:now }]
+      };
+      var updated = [ticket].concat(current);
+      await persistTickets(updated);
+      tickets = updated;
+
+      document.getElementById('ticket-success').innerHTML =
+        '<div class="success-box"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="'+COLORS.moss+'" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>'
+        + '<div>Ticket <span class="mono" style="font-weight:700;">'+esc(id)+'</span> submitted. IT will review it shortly.</div></div>';
+
+      document.getElementById('t-subject').value='';
+      document.getElementById('t-desc').value='';
+      document.getElementById('t-category').selectedIndex=0;
+      newTicketPriority='Medium';
+      selectPriority('Medium');
+      btn.disabled = false;
+    });
+  }
+
+  var deviceForm = document.getElementById('new-device-form');
+  if(deviceForm){
+    deviceForm.addEventListener('submit', async function(e){
+      e.preventDefault();
+      var deviceType = document.getElementById('d-type').value;
+      var qty = document.getElementById('d-qty').value || '1';
+      var forWhom = document.getElementById('d-for').value.trim();
+      var neededBy = document.getElementById('d-needed').value;
+      var description = document.getElementById('d-desc').value.trim();
+      if(!description) return;
+
+      var btn = document.getElementById('submit-device-btn');
+      btn.disabled = true;
+
+      var current = await loadTickets();
+      var id = nextTicketNumber(current);
+      var now = new Date().toISOString();
+      var subject = 'Device Request: '+deviceType+' (x'+qty+')'+(forWhom?' for '+forWhom:'');
+      var ticket = {
+        id: id, subject: subject, category:'Hardware', priority: newDevicePriority, description: description,
+        department: session.department, submittedBy: session.username,
+        status: 'Open', createdAt: now, requestType:'device',
+        details: { deviceType: deviceType, quantity: qty, forWhom: forWhom, neededBy: neededBy },
+        history: [{ status:'Open', note:'Device request submitted.', by:session.username, at:now }]
+      };
+      var updated = [ticket].concat(current);
+      await persistTickets(updated);
+      tickets = updated;
+
+      document.getElementById('device-success').innerHTML =
+        '<div class="success-box"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="'+COLORS.moss+'" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>'
+        + '<div>Request <span class="mono" style="font-weight:700;">'+esc(id)+'</span> submitted. IT will review it shortly.</div></div>';
+
+      deviceForm.reset();
+      document.getElementById('d-qty').value = '1';
+      newDevicePriority='Medium';
+      selectDevicePriority('Medium');
+      btn.disabled = false;
+    });
+  }
+
+  var accessForm = document.getElementById('new-access-form');
+  if(accessForm){
+    accessForm.addEventListener('submit', async function(e){
+      e.preventDefault();
+      var accessType = document.getElementById('a-type').value;
+      var target = document.getElementById('a-target').value.trim();
+      var description = document.getElementById('a-desc').value.trim();
+      if(!target || !description) return;
+
+      var btn = document.getElementById('submit-access-btn');
+      btn.disabled = true;
+
+      var current = await loadTickets();
+      var id = nextTicketNumber(current);
+      var now = new Date().toISOString();
+      var subject = accessType+': '+target;
+      var ticket = {
+        id: id, subject: subject, category:'System Access (SAP / DMS / Email)', priority: newAccessPriority, description: description,
+        department: session.department, submittedBy: session.username,
+        status: 'Open', createdAt: now, requestType:'access',
+        details: { accessType: accessType, target: target },
+        history: [{ status:'Open', note:'Access request submitted.', by:session.username, at:now }]
+      };
+      var updated = [ticket].concat(current);
+      await persistTickets(updated);
+      tickets = updated;
+
+      document.getElementById('access-success').innerHTML =
+        '<div class="success-box"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="'+COLORS.moss+'" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>'
+        + '<div>Request <span class="mono" style="font-weight:700;">'+esc(id)+'</span> submitted. IT will review it shortly.</div></div>';
+
+      accessForm.reset();
+      newAccessPriority='Medium';
+      selectAccessPriority('Medium');
+      btn.disabled = false;
+    });
+  }
+
+  var hireForm = document.getElementById('new-hire-form');
+  if(hireForm){
+    hireForm.addEventListener('submit', async function(e){
+      e.preventDefault();
+      var name = document.getElementById('h-name').value.trim();
+      var position = document.getElementById('h-position').value.trim();
+      var dept = document.getElementById('h-dept').value;
+      var start = document.getElementById('h-start').value;
+      var notes = document.getElementById('h-notes').value.trim();
+      if(!name || !position || !start) return;
+
+      var btn = document.getElementById('submit-hire-btn');
+      btn.disabled = true;
+
+      var current = await loadTickets();
+      var id = nextTicketNumber(current);
+      var now = new Date().toISOString();
+      var subject = 'New Hire Setup: '+name+' ('+dept+')';
+      var description = 'New hire starting '+start+' as '+position+' in '+dept+'.'+(notes?(' Notes: '+notes):'');
+      var ticket = {
+        id: id, subject: subject, category:'New Hire Setup', priority: newHirePriority, description: description,
+        department: session.department, submittedBy: session.username,
+        status: 'Open', createdAt: now, requestType:'newhire',
+        details: { employeeName: name, position: position, assignedDept: dept, startDate: start, equipment: newHireEquipment.slice(), notes: notes },
+        history: [{ status:'Open', note:'New hire announced by HR.', by:session.username, at:now }]
+      };
+      var updated = [ticket].concat(current);
+      await persistTickets(updated);
+      tickets = updated;
+
+      document.getElementById('hire-success').innerHTML =
+        '<div class="success-box"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="'+COLORS.moss+'" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>'
+        + '<div>Notice <span class="mono" style="font-weight:700;">'+esc(id)+'</span> sent to IT for setup.</div></div>';
+
+      hireForm.reset();
+      newHireEquipment = [];
+      newHirePriority='High';
+      document.querySelectorAll('.hire-equip-cb').forEach(function(cb){ cb.checked=false; });
+      selectHirePriority('High');
+      btn.disabled = false;
+    });
+  }
+
+  ['f-search','f-status','f-dept'].forEach(function(id){
+    var el = document.getElementById(id);
+    if(el){
+      var evt = (id==='f-search') ? 'input' : 'change';
+      el.addEventListener(evt, refilterList);
+    }
+  });
+}
+
+/* ============================================================
+   INIT
+============================================================ */
+(async function init(){
+  document.getElementById('root').innerHTML = '<div class="login-wrap"><div class="loading-txt">Loading GEMS Service Desk&hellip;</div></div>';
+  users = await loadUsers();
+  if(!users.length){
+    users = SEED_USERS.map(function(s){ return Object.assign({ id: uid(), createdAt: new Date().toISOString() }, s); });
+    await persistUsers(users);
+  }
+  usersLoaded = true;
+  render();
+})();
+</script>
+</body>
+</html>
