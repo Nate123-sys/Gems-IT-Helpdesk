@@ -1,0 +1,2430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>GEMS Service Desk</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Manrope:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  /* ==============================================================
+     GEMS SERVICE DESK — visual system v3 "dispatch board"
+     A receiving-dock status board: near-black surfaces, LED-style
+     status dots, monospace department codes (DEPT 01, DEPT 02…),
+     and bright signal colors per department/status instead of paper
+     and ink stamps. Every department keeps one fixed accent color
+     end to end — its tile, its badges, its icon — so the color
+     itself becomes the way people recognize a department at a glance.
+     ============================================================== */
+  :root{
+    --bg0:#0c0e12; --bg1:#111319; --panel:#15181e; --panel-2:#1a1d24;
+    --line:#2c313c; --line-strong:#454b59; --text:#f7f5ef; --text-dim:#c2c6ce; --text-mute:#8b909a;
+    --ruby:#ff6b4f; --ruby-deep:#ff4530; --amber:#ffc169; --signal:#5c9ee8; --moss:#7fe8ca;
+    --slate:#c2c6ce; --slate-light:#8b909a;
+    --font-display:'Barlow Condensed','Arial Narrow',sans-serif;
+    --font-body:'Manrope','Inter',system-ui,sans-serif;
+    --font-mono:'IBM Plex Mono','Courier New',monospace;
+    --ease:cubic-bezier(.2,.8,.2,1);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;height:100%;}
+  body{
+    font-family:var(--font-body);color:var(--text);
+    background-color:var(--bg0);
+    background-image:linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px);
+    background-size:34px 34px;
+  }
+  button{font-family:inherit;cursor:pointer;}
+  input,select,textarea{font-family:inherit;font-size:14px;}
+  #root{min-height:100vh;}
+
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:.001ms !important; animation-iteration-count:1 !important; transition-duration:.001ms !important;}
+  }
+
+  .dot{width:7px;height:7px;border-radius:50%;display:inline-block;flex-shrink:0;}
+  .pill, .tag{
+    display:inline-flex;align-items:center;gap:6px;
+    font-family:var(--font-mono);font-size:11px;font-weight:600;
+    text-transform:uppercase;letter-spacing:.08em;
+    border-radius:4px;padding:3px 9px 3px 8px;
+    position:relative;
+    animation:stampIn .28s var(--ease) both;
+  }
+  @keyframes stampIn{
+    0%{ opacity:0; transform:scale(.85) translateY(2px); }
+    100%{ opacity:1; transform:scale(1) translateY(0); }
+  }
+  .pill{border:1px solid currentColor;background:transparent;}
+  .tag{border:1px solid currentColor;opacity:.95;}
+  .cat-chip{font-size:11px;padding:4px 10px;border-radius:4px;background:var(--panel-2);border:1px solid var(--line);color:var(--text-dim);font-family:var(--font-mono);letter-spacing:.03em;}
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;transition:border-color .15s var(--ease),transform .15s var(--ease);}
+  .btn{border:none;border-radius:8px;font-weight:700;padding:10px 18px;font-size:14px;display:inline-flex;align-items:center;gap:8px;transition:transform .12s var(--ease),filter .12s var(--ease),background .12s var(--ease);}
+  .btn:active{transform:translateY(1px);}
+  .btn-primary{background:var(--ruby);color:#1a0a05;}
+  .btn-primary:hover{filter:brightness(1.08);transform:translateY(-1px);}
+  .btn-dark{background:var(--panel-2);color:var(--text);border:1px solid var(--line-strong);}
+  .btn-dark:hover{transform:translateY(-1px);border-color:var(--text-mute);}
+  .btn-muted{background:var(--panel-2);color:var(--text-dim);border:1px solid var(--line-strong);}
+  .btn-muted:hover{transform:translateY(-1px);color:var(--text);}
+  .btn-ghost{background:transparent;border:1px solid var(--line-strong);color:var(--text);}
+  .btn-ghost:hover{border-color:var(--text-dim);background:var(--panel-2);}
+  .btn:disabled{opacity:.5;cursor:default;transform:none;}
+  .eyebrow{font-family:var(--font-mono);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.14em;color:var(--ruby);margin-bottom:5px;}
+  .h-title{font-family:var(--font-display);font-weight:800;font-size:31px;letter-spacing:.001em;color:var(--text);}
+  .h-subtitle{font-family:var(--font-body);font-size:14px;color:var(--text-dim);margin-top:6px;}
+  .field-label{font-family:var(--font-mono);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--text-dim);display:block;margin-bottom:6px;}
+  .input, select.input, textarea.input{width:100%;border:1px solid var(--line-strong);border-radius:8px;padding:10px 14px;outline:none;background:var(--panel-2);color:var(--text);transition:border-color .12s var(--ease);}
+  .input::placeholder{color:var(--text-mute);}
+  .input:focus{border-color:var(--ruby);}
+  .input-sm{border:1px solid var(--line-strong);border-radius:7px;padding:7px 10px;outline:none;background:var(--panel-2);color:var(--text);font-size:13px;width:100%;}
+  .input-sm:focus{border-color:var(--ruby);}
+  .mono{font-family:var(--font-mono);}
+  select.input option{background:var(--panel-2);color:var(--text);}
+
+  /* ---------- login ---------- */
+  .login-wrap{
+    min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;
+    background-color:var(--bg0);
+    background-image:radial-gradient(rgba(255,255,255,.05) 1px, transparent 1px);
+    background-size:26px 26px;
+    position:relative;overflow:hidden;
+  }
+  .login-wrap::before{
+    content:'';position:absolute;left:0;right:0;top:0;height:4px;
+    background:repeating-linear-gradient(90deg, var(--ruby) 0 22px, var(--bg0) 22px 44px);
+  }
+  .login-wrap::after{
+    content:'';position:absolute;left:0;right:0;bottom:0;height:4px;
+    background:repeating-linear-gradient(90deg, var(--moss) 0 22px, var(--bg0) 22px 44px);
+  }
+  .login-crate-mark{position:absolute;right:-24px;bottom:-24px;pointer-events:none;transform:rotate(-8deg);z-index:0;opacity:.5;}
+  .login-inner{width:100%;max-width:380px;position:relative;z-index:1;}
+  .logo-row{display:flex;align-items:center;gap:8px;justify-content:center;margin-bottom:32px;}
+  .logo-row .logo-title{color:var(--text);}
+  .logo-title{font-family:var(--font-display);font-weight:800;line-height:1;letter-spacing:.01em;}
+  .logo-sub{font-family:var(--font-mono);font-weight:600;color:var(--moss);letter-spacing:.22em;margin-top:3px;}
+  .login-card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:30px 28px;position:relative;animation:cardIn .3s var(--ease) both;}
+  .login-stub-tag{position:absolute;top:16px;right:16px;font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:.1em;color:var(--text-mute);border:1px dashed var(--line-strong);border-radius:3px;padding:2px 7px;}
+  .login-card h1{font-family:var(--font-display);font-weight:800;font-size:22px;margin:6px 0 4px 0;color:var(--text);letter-spacing:.01em;}
+  .login-card p.sub{font-size:13px;color:var(--text-dim);margin:0 0 20px 0;line-height:1.5;}
+  .dept-select{position:relative;margin-bottom:16px;}
+  .dept-btn{width:100%;display:flex;align-items:center;justify-content:space-between;border:1px solid var(--line-strong);border-radius:8px;padding:11px 14px;font-size:14px;font-weight:600;background:var(--panel-2);color:var(--text-mute);}
+  .dept-btn.chosen{color:var(--text);}
+  .dept-btn.open{border-color:var(--ruby);}
+  .dept-list{position:absolute;z-index:20;margin-top:6px;width:100%;background:var(--panel-2);border:1px solid var(--line-strong);border-radius:8px;overflow:hidden;max-height:260px;overflow-y:auto;display:none;}
+  .dept-list.show{display:block;}
+  .dept-item{width:100%;text-align:left;border:none;background:transparent;padding:11px 14px;font-size:14px;font-weight:600;color:var(--text);border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;}
+  .dept-item:last-child{border-bottom:none;}
+  .dept-item:hover{background:var(--panel);}
+  .form-row{margin-bottom:14px;}
+  .err-box{background:rgba(255,90,60,.12);color:var(--ruby);font-size:12px;font-weight:700;border-radius:8px;padding:9px 12px;margin-bottom:12px;display:none;border:1px solid rgba(255,90,60,.3);}
+  .err-box.show{display:block;}
+  .hint-box{margin-top:14px;font-size:12px;color:var(--text-dim);background:var(--panel-2);border-radius:8px;padding:9px 12px;display:none;border:1px solid var(--line);}
+  .hint-box.show{display:block;}
+  .login-footer{text-align:center;font-size:11px;font-family:var(--font-mono);letter-spacing:.04em;color:var(--text-mute);margin-top:22px;}
+  .loading-txt{color:var(--text-dim);font-size:13px;font-weight:600;text-align:center;}
+  .login-choice-btn{width:100%;justify-content:center;font-family:var(--font-display);letter-spacing:.04em;font-size:15px;padding:14px;}
+  .login-choice-sub{font-size:11px;font-weight:500;opacity:.85;margin-left:2px;}
+
+  /* ---------- app shell ---------- */
+  .app-shell{display:flex;min-height:100vh;}
+  .sidebar{
+    width:246px;flex-shrink:0;display:flex;flex-direction:column;padding:18px 16px;
+    border-right:1px solid var(--line);position:relative;overflow:hidden;
+    background-color:var(--bg1);
+  }
+  .sidebar::after{
+    content:'';position:absolute;left:0;right:0;bottom:0;height:80px;
+    background:linear-gradient(0deg, rgba(255,90,60,.08), transparent);pointer-events:none;
+  }
+  .sidebar .logo-row{justify-content:flex-start;margin:0 0 22px 8px;}
+  .nav{display:flex;flex-direction:column;gap:4px;flex:1;position:relative;z-index:1;}
+  .nav-item{display:flex;align-items:center;justify-content:space-between;gap:10px;border:none;background:transparent;border-radius:8px;padding:10px 12px;font-size:14px;font-weight:600;color:var(--text-dim);width:100%;text-align:left;transition:background .12s var(--ease),color .12s var(--ease);position:relative;overflow:hidden;}
+  .nav-item::before{content:'';position:absolute;left:0;top:6px;bottom:6px;width:3px;border-radius:2px;background:var(--ruby);transform:scaleY(0);transition:transform .15s var(--ease);}
+  .nav-item .nav-left{display:flex;align-items:center;gap:10px;}
+  .nav-item:hover{background:var(--panel);color:var(--text);}
+  .nav-item:hover::before{transform:scaleY(.5);}
+  .nav-item.active{background:rgba(255,90,60,.14);color:var(--ruby);}
+  .nav-item.active::before{transform:scaleY(1);}
+  .nav-badge{font-family:var(--font-mono);font-size:10px;font-weight:700;border-radius:3px;background:var(--ruby);color:#1a0a05;padding:2px 6px;}
+  .side-user{background:var(--panel);border-radius:8px;padding:12px;margin-top:10px;border:1px solid var(--line);position:relative;z-index:1;}
+  .side-user-top{display:flex;align-items:center;gap:10px;}
+  .side-avatar{width:34px;height:34px;border-radius:50%;background:var(--panel-2);color:var(--text);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex-shrink:0;border:1px solid var(--line-strong);}
+  .side-user-divider{height:1px;background:var(--line);margin:10px 0;}
+  .side-user .d{font-family:var(--font-body);font-size:14px;font-weight:700;color:var(--text);letter-spacing:.005em;}
+  .side-user .u{font-family:var(--font-body);font-size:12px;color:var(--text-mute);margin-top:1px;}
+  .side-user button{border:none;background:transparent;color:var(--ruby);font-size:12px;font-weight:700;padding:0;display:flex;align-items:center;gap:5px;}
+  .nav-divider{height:1px;background:var(--line);margin:10px 4px;position:relative;z-index:1;}
+
+  .main{flex:1;overflow-y:auto;background-color:var(--bg0);background-image:linear-gradient(rgba(12,14,18,.82),rgba(12,14,18,.88)),url("data:image/svg+xml,%3Csvg%20width%3D%221600%22%20height%3D%22900%22%20viewBox%3D%220%200%201600%20900%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%0A%3Crect%20x%3D%220%22%20y%3D%220%22%20width%3D%221600%22%20height%3D%22900%22%20fill%3D%22%230c0e12%22/%3E%0A%3Cpath%20d%3D%22M-40%20700%20C%20300%20500%2C%20500%20760%2C%20840%20520%20S%201240%20240%2C%201650%20180%22%20stroke%3D%22%23ff6b4f%22%20stroke-width%3D%222%22%20fill%3D%22none%22%20stroke-dasharray%3D%223%2018%22%20opacity%3D%220.28%22%20stroke-linecap%3D%22round%22/%3E%0A%3Cpath%20d%3D%22M-40%20240%20C%20240%20400%2C%20600%20120%2C%20920%20360%20S%201280%20680%2C%201650%20600%22%20stroke%3D%22%235c9ee8%22%20stroke-width%3D%222%22%20fill%3D%22none%22%20stroke-dasharray%3D%223%2018%22%20opacity%3D%220.24%22%20stroke-linecap%3D%22round%22/%3E%0A%3Cpath%20d%3D%22M-40%20500%20C%20400%20640%2C%20760%20400%2C%201120%20560%20S%201320%20400%2C%201650%20440%22%20stroke%3D%22%237fe8ca%22%20stroke-width%3D%222%22%20fill%3D%22none%22%20stroke-dasharray%3D%223%2018%22%20opacity%3D%220.2%22%20stroke-linecap%3D%22round%22/%3E%0A%3Ccircle%20cx%3D%22300%22%20cy%3D%22510%22%20r%3D%226%22%20fill%3D%22%23ff6b4f%22%20opacity%3D%220.45%22/%3E%0A%3Ccircle%20cx%3D%22840%22%20cy%3D%22520%22%20r%3D%226%22%20fill%3D%22%23ff6b4f%22%20opacity%3D%220.45%22/%3E%0A%3Ccircle%20cx%3D%22600%22%20cy%3D%22140%22%20r%3D%226%22%20fill%3D%22%235c9ee8%22%20opacity%3D%220.4%22/%3E%0A%3Ccircle%20cx%3D%22920%22%20cy%3D%22358%22%20r%3D%226%22%20fill%3D%22%235c9ee8%22%20opacity%3D%220.4%22/%3E%0A%3Ccircle%20cx%3D%22760%22%20cy%3D%22410%22%20r%3D%226%22%20fill%3D%22%237fe8ca%22%20opacity%3D%220.35%22/%3E%0A%3Ccircle%20cx%3D%221120%22%20cy%3D%22558%22%20r%3D%226%22%20fill%3D%22%237fe8ca%22%20opacity%3D%220.35%22/%3E%0A%3Cg%20opacity%3D%220.32%22%3E%0A%3Crect%20x%3D%22180%22%20y%3D%22120%22%20width%3D%2226%22%20height%3D%2218%22%20fill%3D%22none%22%20stroke%3D%22%23ffc169%22%20stroke-width%3D%222%22/%3E%0A%3Crect%20x%3D%22180%22%20y%3D%22140%22%20width%3D%2226%22%20height%3D%227%22%20fill%3D%22none%22%20stroke%3D%22%23ffc169%22%20stroke-width%3D%222%22/%3E%0A%3C/g%3E%0A%3Cg%20opacity%3D%220.3%22%3E%0A%3Cpath%20d%3D%22M1240%20190%20L1320%20170%20L1340%20190%20L1240%20190%20Z%22%20fill%3D%22none%22%20stroke%3D%22%235c9ee8%22%20stroke-width%3D%222%22/%3E%0A%3Ccircle%20cx%3D%221258%22%20cy%3D%22196%22%20r%3D%226%22%20fill%3D%22none%22%20stroke%3D%22%235c9ee8%22%20stroke-width%3D%222%22/%3E%0A%3Ccircle%20cx%3D%221318%22%20cy%3D%22196%22%20r%3D%226%22%20fill%3D%22none%22%20stroke%3D%22%235c9ee8%22%20stroke-width%3D%222%22/%3E%0A%3C/g%3E%0A%3Cg%20opacity%3D%220.28%22%3E%0A%3Crect%20x%3D%221360%22%20y%3D%22600%22%20width%3D%2242%22%20height%3D%2230%22%20fill%3D%22none%22%20stroke%3D%22%237fe8ca%22%20stroke-width%3D%222%22/%3E%0A%3Crect%20x%3D%221366%22%20y%3D%22590%22%20width%3D%2230%22%20height%3D%2210%22%20fill%3D%22none%22%20stroke%3D%22%237fe8ca%22%20stroke-width%3D%222%22/%3E%0A%3C/g%3E%0A%3Cg%20opacity%3D%220.3%22%3E%0A%3Crect%20x%3D%2280%22%20y%3D%22620%22%20width%3D%2240%22%20height%3D%2228%22%20fill%3D%22none%22%20stroke%3D%22%23ff6b4f%22%20stroke-width%3D%222%22/%3E%0A%3Crect%20x%3D%2280%22%20y%3D%22620%22%20width%3D%2240%22%20height%3D%226%22%20fill%3D%22none%22%20stroke%3D%22%23ff6b4f%22%20stroke-width%3D%222%22/%3E%0A%3C/g%3E%0A%3C/svg%3E%0A");background-size:cover;background-position:center;background-repeat:no-repeat;background-attachment:fixed;}
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:15px 32px;border-bottom:1px solid var(--line);background:var(--bg1);position:relative;}
+  .topbar .tb-left{font-family:var(--font-mono);font-size:11px;letter-spacing:.03em;color:var(--text-mute);}
+  .topbar .tb-refresh{border:none;background:transparent;font-size:12px;font-weight:700;color:var(--text-dim);display:flex;align-items:center;gap:6px;}
+  .topbar .tb-refresh:hover{color:var(--text);}
+  .content{padding:32px;animation:contentIn .24s var(--ease) both;}
+  @keyframes contentIn{ from{opacity:0;transform:translateY(6px);} to{opacity:1;transform:translateY(0);} }
+  @keyframes cardIn{ from{opacity:0;transform:translateY(10px);} to{opacity:1;transform:translateY(0);} }
+  @keyframes tileIn{ from{opacity:0;transform:translateY(10px);} to{opacity:1;transform:translateY(0);} }
+
+  .section-head{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:22px;flex-wrap:wrap;gap:12px;}
+
+  .stat-grid{display:grid;gap:16px;margin-bottom:24px;}
+  .stat-grid.g3{grid-template-columns:repeat(3,1fr);}
+  .stat-grid.g4{grid-template-columns:repeat(4,1fr);}
+  .stat-card{padding:18px;position:relative;overflow:hidden;transition:transform .15s var(--ease),border-color .15s var(--ease);}
+  .stat-card:hover{transform:translateY(-2px);border-color:var(--line-strong);}
+  .stat-card::after{content:'';position:absolute;top:14px;right:14px;width:8px;height:8px;border-radius:50%;background:currentColor;}
+  .stat-card .lbl{display:flex;align-items:center;gap:7px;font-family:var(--font-mono);font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text-dim);margin-bottom:10px;}
+  .stat-card .val{font-family:var(--font-display);font-weight:800;font-size:36px;color:var(--text);line-height:1;}
+
+  .list-header{display:grid;grid-template-columns:1.1fr 2fr 1.2fr 1.3fr 1.1fr 1.1fr 0.9fr;gap:10px;padding:10px 16px;background:var(--panel-2);font-family:var(--font-mono);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text-dim);}
+  .list-row{display:grid;grid-template-columns:1.1fr 2fr 1.2fr 1.3fr 1.1fr 1.1fr 0.9fr;gap:10px;align-items:center;padding:13px 16px 13px 19px;border-top:1px solid var(--line);width:100%;background:transparent;border-left:3px solid transparent;text-align:left;transition:background .1s,border-left-color .1s;}
+  .list-row:hover{background:var(--panel-2);border-left-color:var(--ruby);}
+  .list-empty{padding:40px 16px;text-align:center;font-size:14px;color:var(--text-mute);}
+  .truncate{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .right{text-align:right;}
+
+  .filters{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px;}
+  .search-box{display:flex;align-items:center;gap:8px;border:1px solid var(--line-strong);border-radius:8px;padding:8px 12px;background:var(--panel-2);transition:border-color .12s var(--ease);}
+  .search-box:focus-within{border-color:var(--ruby);}
+  .search-box input{border:none;outline:none;width:190px;font-size:13px;background:transparent;color:var(--text);}
+  .filters select{border:1px solid var(--line-strong);border-radius:8px;padding:8px 12px;font-size:13px;background:var(--panel-2);color:var(--text);}
+
+  .form-card{max-width:640px;padding:26px;}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  .priority-row{display:flex;gap:8px;}
+  .priority-btn{flex:1;border-radius:8px;padding:9px 0;font-family:var(--font-mono);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;border:1px solid var(--line-strong);background:transparent;color:var(--text-dim);display:flex;align-items:center;justify-content:center;gap:6px;transition:border-color .12s,transform .1s;}
+  .priority-btn:hover{border-color:var(--text-mute);transform:translateY(-1px);}
+  .priority-btn.selected{border-color:currentColor;}
+  .success-box{margin-bottom:18px;border-radius:8px;padding:12px 16px;background:rgba(111,227,196,.1);border:1px solid rgba(111,227,196,.3);display:flex;align-items:center;gap:10px;font-size:14px;color:var(--text);animation:cardIn .3s var(--ease) both;}
+
+  .modal-overlay{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.6);display:none;align-items:stretch;justify-content:flex-end;}
+  .modal-overlay.show{display:flex;}
+  .modal-panel{width:100%;max-width:520px;height:100%;overflow-y:auto;background:var(--bg1);padding:26px;animation:panelIn .2s var(--ease) both;border-left:1px solid var(--line);}
+  @keyframes panelIn{ from{transform:translateX(24px);opacity:0;} to{transform:translateX(0);opacity:1;} }
+  .modal-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:4px;}
+  .modal-close{border:none;background:transparent;font-size:12px;font-weight:700;color:var(--text-dim);}
+  .modal-close:hover{color:var(--text);}
+  .modal-subject{font-family:var(--font-display);font-weight:800;font-size:23px;color:var(--text);margin-bottom:12px;}
+  .badge-row{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:20px;}
+  .meta-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:12px;margin-bottom:20px;}
+  .meta-grid .k{font-family:var(--font-mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-mute);}
+  .meta-grid .v{font-weight:700;color:var(--text);margin-top:3px;}
+  .desc-box{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px;font-size:14px;line-height:1.6;margin-bottom:22px;border-left:3px solid var(--ruby);color:var(--text);}
+  .activity-title{font-family:var(--font-mono);font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text-dim);margin-bottom:10px;}
+  .activity-item{display:flex;gap:10px;font-size:12px;margin-bottom:12px;}
+  .activity-item .txt{color:var(--text-dim);}
+  .activity-item .txt b{color:var(--text);}
+  .activity-item .who{color:var(--text-mute);margin-top:1px;font-family:var(--font-mono);font-size:11px;}
+  .it-action{border:1px dashed var(--line-strong);border-radius:10px;padding:16px;}
+  .quick-row{display:flex;gap:10px;margin-bottom:16px;}
+  .quick-row .btn{flex:1;justify-content:center;}
+  .status-flow{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;}
+  .status-btn{border-radius:4px;padding:6px 12px;font-family:var(--font-mono);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;border:1px solid var(--line-strong);background:transparent;color:var(--text-dim);transition:border-color .12s,transform .1s;}
+  .status-btn:hover{border-color:var(--text-mute);transform:translateY(-1px);}
+  .status-btn.selected{border-color:currentColor;}
+  .readonly-note{font-size:12px;background:var(--panel);border-radius:8px;padding:12px;color:var(--text-dim);border:1px dashed var(--line-strong);}
+
+  .bar-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+  .bar-row .lab{width:112px;font-size:12px;color:var(--text);flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .bar-track{flex:1;height:8px;border-radius:4px;background:var(--panel-2);overflow:hidden;}
+  .bar-fill{height:8px;border-radius:4px;transition:width .4s var(--ease);}
+  .bar-n{width:24px;text-align:right;font-family:var(--font-mono);font-size:12px;font-weight:700;color:var(--text);}
+  .scope-toggle{display:flex;border:1px solid var(--line-strong);border-radius:8px;overflow:hidden;}
+  .scope-toggle button{border:none;padding:9px 16px;font-family:var(--font-mono);font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;background:var(--panel-2);color:var(--text-dim);display:flex;align-items:center;gap:6px;}
+  .scope-toggle button.active{background:var(--ruby);color:#1a0a05;}
+
+  /* ---------- user management ---------- */
+  .user-header{display:grid;grid-template-columns:1.3fr 1.5fr 1.5fr 1fr;gap:10px;padding:10px 16px;background:var(--panel-2);font-family:var(--font-mono);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text-dim);}
+  .user-row{display:grid;grid-template-columns:1.3fr 1.5fr 1.5fr 1fr;gap:10px;align-items:center;padding:12px 16px;border-top:1px solid var(--line);}
+  .user-row .dept-badge{font-size:12px;font-weight:700;color:var(--text);}
+  .pw-cell{display:flex;align-items:center;gap:8px;}
+  .icon-btn{border:1px solid var(--line-strong);background:var(--panel-2);border-radius:6px;padding:6px 10px;font-size:12px;font-weight:700;color:var(--text);display:inline-flex;align-items:center;gap:5px;transition:transform .1s var(--ease),border-color .1s var(--ease);}
+  .icon-btn:hover{transform:translateY(-1px);border-color:var(--text-mute);}
+  .icon-btn:active{transform:translateY(0);}
+  .icon-btn.danger{color:var(--ruby);border-color:rgba(255,90,60,.35);}
+  .icon-btn.danger:hover{border-color:var(--ruby);}
+  .row-actions{display:flex;gap:6px;}
+  .add-user-card{padding:20px;margin-bottom:20px;}
+  .add-user-grid{display:grid;grid-template-columns:1fr 1fr 1.3fr 1.3fr auto;gap:12px;align-items:end;}
+  .u-err{font-size:12px;font-weight:700;color:var(--ruby);margin-top:8px;display:none;}
+  .u-err.show{display:block;}
+  .u-note{font-size:12px;color:var(--text-dim);margin-bottom:16px;line-height:1.5;}
+
+  /* ---------- attachments ---------- */
+  .attach-zone{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+  .attach-btn{display:inline-flex;align-items:center;gap:8px;border:1px dashed var(--line-strong);border-radius:8px;padding:9px 14px;font-size:13px;font-weight:600;color:var(--text-dim);cursor:pointer;transition:border-color .12s var(--ease),color .12s var(--ease);}
+  .attach-btn:hover{border-color:var(--ruby);color:var(--text);}
+  .attach-hint{font-size:11.5px;color:var(--text-mute);}
+  .attach-list{display:flex;flex-direction:column;gap:8px;margin-top:12px;}
+  .attach-chip{display:flex;align-items:center;gap:10px;background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:8px 10px;}
+  .attach-thumb{width:34px;height:34px;border-radius:6px;object-fit:cover;flex-shrink:0;background:var(--bg1);}
+  .attach-thumb-file{display:flex;align-items:center;justify-content:center;color:var(--text-dim);}
+  .attach-chip-meta{flex:1;min-width:0;}
+  .attach-chip-name{font-size:12.5px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .attach-chip-size{font-size:11px;color:var(--text-mute);font-family:var(--font-mono);margin-top:1px;}
+  .attach-chip-remove{border:none;background:transparent;color:var(--text-mute);display:flex;align-items:center;justify-content:center;padding:4px;border-radius:4px;flex-shrink:0;}
+  .attach-chip-remove:hover{color:var(--ruby);background:rgba(255,90,60,.1);}
+  .attach-actions{display:flex;gap:6px;flex-shrink:0;margin-left:auto;}
+  .attach-actions .icon-btn{font-size:11.5px;padding:5px 9px;text-decoration:none;}
+  @media (max-width: 900px){
+    .attach-chip{flex-wrap:wrap;}
+    .attach-actions{margin-left:0;width:100%;}
+    .attach-actions .icon-btn{flex:1;justify-content:center;}
+  }
+
+  /* ---------- activity log ---------- */
+  .activity-log-header{display:grid;grid-template-columns:1.3fr 1.2fr 1.1fr 1.3fr 2fr;gap:10px;padding:10px 16px;background:var(--panel-2);font-family:var(--font-mono);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text-dim);}
+  .activity-log-row{display:grid;grid-template-columns:1.3fr 1.2fr 1.1fr 1.3fr 2fr;gap:10px;align-items:center;padding:12px 16px;border-top:1px solid var(--line);}
+  .activity-log-row:hover{background:var(--panel-2);}
+  @media (max-width: 900px){
+    .activity-log-header{display:none;}
+    .activity-log-row{grid-template-columns:1fr;gap:4px;}
+  }
+
+  /* ---------- department picker / HR request kiosk ---------- */
+  .back-link{border:none;background:transparent;display:inline-flex;align-items:center;gap:6px;font-family:var(--font-mono);font-size:11px;font-weight:600;letter-spacing:.03em;color:var(--text-dim);margin-bottom:16px;padding:0;transition:color .12s;}
+  .back-link:hover{color:var(--ruby);}
+
+  /* Dispatch-board department tiles — the signature element. Each
+     card is a status panel: a code + LED dot up top identify the
+     line, a plain colored icon and name sit below, and the border
+     lights up to the department's own accent on hover, the way a
+     dock bay's frame lights when it's selected. */
+  .dept-tile-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;}
+  .dept-tile{
+    padding:22px 20px;display:flex;flex-direction:column;align-items:flex-start;gap:0;text-align:left;
+    position:relative;overflow:hidden;background:var(--panel);
+    animation:tileIn .3s var(--ease) both; animation-delay:calc(var(--stagger,0) * 40ms);
+  }
+  .dept-tile .tile-icon-badge{
+    width:48px;height:48px;border-radius:13px;display:flex;align-items:center;justify-content:center;
+    margin-bottom:16px;transition:transform .18s var(--ease);flex-shrink:0;
+  }
+  .dept-tile .tile-name{font-family:var(--font-display);font-weight:800;font-size:19px;color:var(--text);letter-spacing:.005em;}
+  .dept-tile .tile-sub{font-family:var(--font-body);font-size:12.5px;color:var(--text-mute);margin-top:5px;line-height:1.4;}
+  .dept-tile:hover{border-color:var(--accent, var(--line-strong));transform:translateY(-3px);}
+  .dept-tile:hover .tile-icon-badge{transform:scale(1.08);}
+
+  .hr-type-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;}
+  .hr-type-btn{padding:16px 18px;display:flex;align-items:center;gap:14px;text-align:left;animation:tileIn .26s var(--ease) both;}
+  .hr-type-btn:hover{border-color:var(--ruby);transform:translateY(-2px);}
+  .hr-type-btn:hover .tile-icon{transform:scale(1.08);}
+  .hr-type-btn .tile-icon{transition:transform .16s var(--ease);}
+  .hr-type-btn .tile-icon{width:40px;height:40px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .hr-type-btn .tile-name{font-weight:700;font-size:14.5px;color:var(--text);}
+  .dept-action-row{display:flex;gap:12px;flex-wrap:wrap;}
+  .dept-action-card{flex:1;min-width:220px;padding:20px;display:flex;flex-direction:column;align-items:flex-start;gap:10px;text-align:left;animation:tileIn .26s var(--ease) both;}
+  .dept-action-card:hover{border-color:var(--ruby);transform:translateY(-3px);}
+  .dept-action-card:hover .tile-icon{transform:scale(1.08);}
+  .dept-action-card .tile-icon{transition:transform .16s var(--ease);}
+  .dept-action-card .tile-icon{width:40px;height:40px;border-radius:9px;display:flex;align-items:center;justify-content:center;}
+  .dept-action-card .tile-name{color:var(--text);font-weight:700;font-size:14.5px;}
+  .dept-action-card .tile-sub{color:var(--text-dim);font-family:var(--font-mono);font-size:10.5px;}
+
+  @media (max-width: 1080px){ .dept-tile-grid{grid-template-columns:repeat(3,1fr);} }
+  @media (max-width: 900px){
+    .dept-tile-grid{grid-template-columns:repeat(2,1fr);}
+    .hr-type-grid{grid-template-columns:1fr;}
+    .stat-grid.g3, .stat-grid.g4{grid-template-columns:repeat(2,1fr);}
+    .grid2{grid-template-columns:1fr;}
+    .list-header, .user-header{display:none;}
+    .list-row{grid-template-columns:1fr;gap:4px;}
+    .user-row{grid-template-columns:1fr;gap:6px;}
+    .add-user-grid{grid-template-columns:1fr;}
+    .sidebar{width:200px;}
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+/* ============================================================
+   DATA
+============================================================ */
+var COLORS = {
+  ink:'#f0ede4', ruby:'#ff5a3c', rubyDeep:'#e2412e', amber:'#ffb454',
+  signal:'#4a90e2', moss:'#6fe3c4', slate:'#9a9ea6', slateLight:'#5f636b'
+};
+
+var STAFF_ALLOWED_NAMES = [
+  'Kian Carvajal','Erik Bejuco','Nathaniel Reynado','Gian Mercado','Justin Mercado',
+  'Maybell Cortes','Baby Jane Bayhon','Abby Chavez','Urica Rdoble','Jheia Abad',
+  'Marlyn Garces','John Michael Manila','Roy Casamayor','Sidney Taborite','Alnie Arnoza',
+  'Cherry Gabato','Dove Duallo','Amor Abanid','Jim Cortes','Princis Lagod',
+  'Jessa Omolon','Rose Ahn Bregente','Aleah Daloso','Cherry Daub','Hanaleth Arriesgado',
+  'Shaene Marie Camonias','Edrian Paul Valenzuela','Shell Ann Bregente','Jeannelyn Duran',
+  'Arnold Jure','Emmerson Robis','Rodel Malayo'
+];
+function normalizeName(s){
+  return String(s==null?'':s).trim().replace(/\s+/g,' ').toLowerCase();
+}
+function isAllowedStaffName(name){
+  var n = normalizeName(name);
+  if(!n) return false;
+  return STAFF_ALLOWED_NAMES.some(function(allowed){ return normalizeName(allowed)===n; });
+}
+
+var DEPARTMENTS = [
+  { id:'sales', name:'Sales' },
+  { id:'marketing', name:'Marketing' },
+  { id:'importation', name:'Importation' },
+  { id:'admin', name:'Admin' },
+  { id:'hr', name:'HR' },
+  { id:'accounting', name:'Accounting' },
+  { id:'finance', name:'Finance' },
+  { id:'production', name:'Production' },
+  { id:'inventory', name:'Inventory Control' },
+  { id:'it', name:'IT', isAdmin:true }
+];
+var SEED_USERS = [
+  { deptId:'sales', username:'sales', password:'sales123', role:'staff' },
+  { deptId:'sales', username:'sales.admin', password:'salesAdmin123', role:'deptAdmin' },
+  { deptId:'marketing', username:'marketing', password:'marketing123', role:'staff' },
+  { deptId:'marketing', username:'marketing.admin', password:'marketingAdmin123', role:'deptAdmin' },
+  { deptId:'importation', username:'importation', password:'import123', role:'staff' },
+  { deptId:'importation', username:'importation.admin', password:'importAdmin123', role:'deptAdmin' },
+  { deptId:'admin', username:'admin.dept', password:'admin123', role:'staff' },
+  { deptId:'admin', username:'admin.admin', password:'adminAdmin123', role:'deptAdmin' },
+  { deptId:'hr', username:'hr', password:'hr123', role:'staff' },
+  { deptId:'hr', username:'hr.admin', password:'hrAdmin123', role:'deptAdmin' },
+  { deptId:'accounting', username:'accounting', password:'acct123', role:'staff' },
+  { deptId:'accounting', username:'accounting.admin', password:'acctAdmin123', role:'deptAdmin' },
+  { deptId:'finance', username:'finance', password:'fin123', role:'staff' },
+  { deptId:'finance', username:'finance.admin', password:'finAdmin123', role:'deptAdmin' },
+  { deptId:'production', username:'production', password:'prod123', role:'staff' },
+  { deptId:'production', username:'production.admin', password:'prodAdmin123', role:'deptAdmin' },
+  { deptId:'inventory', username:'inventory', password:'inv123', role:'staff' },
+  { deptId:'inventory', username:'inventory.admin', password:'invAdmin123', role:'deptAdmin' },
+  { deptId:'it', username:'it.admin', password:'P@ssw0rd01', role:'itAdmin' }
+];
+
+var CATEGORIES = [
+  'Hardware','Software','Network / Internet',
+  'System Access (SAP / DMS / Email)','Printer / Peripherals','Other'
+];
+var PRIORITIES = ['Low','Medium','High','Critical'];
+var PRIORITY_COLOR = { Low:COLORS.moss, Medium:COLORS.amber, High:COLORS.ruby, Critical:COLORS.rubyDeep };
+
+var STATUS_FLOW = ['Open','In Review','Approved','In Progress','Resolved','Rejected'];
+var STATUS_COLOR = {
+  'Open':COLORS.ruby, 'In Review':COLORS.amber, 'Approved':COLORS.signal,
+  'In Progress':COLORS.signal, 'Resolved':COLORS.moss, 'Rejected':COLORS.slate
+};
+var REQUEST_TYPE_COLOR = {
+  issue: COLORS.slate, device: COLORS.signal, access: COLORS.amber,
+  newhire: COLORS.moss, hr: '#c9a0ec'
+};
+
+var REQUEST_TYPE_LABEL = { issue:'General Issue', device:'Device Request', access:'Access / Password Request', newhire:'New Hire Setup', hr:'HR Request' };
+var DEVICE_TYPES = ['Printer','Keyboard','Mouse','PC / Desktop','Laptop','Monitor','Docking Station / Adapter','Other'];
+var ACCESS_TYPES = ['Password Reset','Shared Folder Access','System / Account Access (SAP, DMS, Email)','Other'];
+var EQUIPMENT_OPTIONS = ['PC / Desktop','Laptop','Monitor','Keyboard & Mouse','Headset','Printer Access','Email Account','System Accounts (SAP / DMS)'];
+
+var HR_TYPES = [
+  { id:'overtime',    label:'Request for Overtime',        fields:['employee','date','hours','reason'] },
+  { id:'undertime',   label:'Request for Undertime',       fields:['employee','date','hours','reason'] },
+  { id:'attendance',  label:'Attendance Concerns',         fields:['employee','date','correction','reason'] },
+  { id:'sick',        label:'Sick Leave',                  fields:['employee','dateFrom','dateTo','reason'] },
+  { id:'emergency',   label:'Emergency Leave',             fields:['employee','dateFrom','dateTo','reason'] },
+  { id:'vacation',    label:'Vacation Leave',               fields:['employee','dateFrom','dateTo','reason'] },
+  { id:'incident',    label:'Incident Report',              fields:['employee','date','reason'] },
+  { id:'coe',         label:'Request for COE',              fields:['employee','purpose','dateNeeded'] },
+  { id:'newemployee', label:'New Employee',                special:'newhire' },
+  { id:'announcement',label:'Announcement',                 special:'announcement' },
+  { id:'memo',        label:'Memo',                         special:'memo' }
+];
+var HR_GROUPS = [
+  { id:'payroll', label:'Payroll Concerns', types:['overtime','undertime','attendance'] },
+  { id:'leave',   label:'Leave Concerns',   types:['sick','emergency','vacation'] }
+];
+var HR_FIELD_LABEL = {
+  employee:'Employee name', date:'Date', dateFrom:'Leave start', dateTo:'Leave end',
+  hours:'Hours', correction:'Correct time in / time out', reason:'Reason / details',
+  purpose:'Purpose of request', dateNeeded:'Date needed by'
+};
+
+var TICKETS_KEY = 'gems-helpdesk-tickets-v1';
+var USERS_KEY = 'gems-helpdesk-users-v1';
+var ACTIVITY_KEY = 'gems-helpdesk-activity-v1';
+
+/* ============================================================
+   STATE
+============================================================ */
+var session = null;
+var loginMode = 'choose';
+var tickets = [];
+var users = [];
+var activityLog = [];
+var usersLoaded = false;
+var view = 'dashboard';
+var activityFilterAction = 'All';
+var activeTicketId = null;
+var selectedDeptId = null;
+var activeDeptId = null;
+var activeHrType = null;
+var activeHrGroup = null;
+var newTicketPriority = 'Medium';
+var newDevicePriority = 'Medium';
+var newAccessPriority = 'Medium';
+var newHirePriority = 'High';
+var newHireEquipment = [];
+var newHrPriority = 'Medium';
+var newAnnouncementPriority = 'Medium';
+var newMemoPriority = 'Medium';
+var modalStatus = null;
+var reportScope = 'day';
+var editingUserId = null;
+var pwVisible = {};
+
+/* ============================================================
+   STORAGE HELPERS
+============================================================ */
+async function kvGet(key){
+  try{
+    var res = await fetch('/api/kv/' + encodeURIComponent(key));
+    if(res.ok){
+      var data = await res.json();
+      return (data && data.value != null) ? data.value : null;
+    }
+  }catch(e){ }
+  try{ return localStorage.getItem(key); } catch(e){ return null; }
+}
+async function kvSet(key, value){
+  try{
+    var res = await fetch('/api/kv/' + encodeURIComponent(key), {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json' },
+      body: JSON.stringify({ value: value })
+    });
+    if(res.ok){
+      try{ localStorage.setItem(key, value); } catch(e){}
+      return;
+    }
+  }catch(e){ }
+  try{ localStorage.setItem(key, value); } catch(e){ console.error('storage error', e); }
+}
+
+async function loadTickets(){
+  var raw = await kvGet(TICKETS_KEY);
+  try{ return raw ? JSON.parse(raw) : []; } catch(e){ return []; }
+}
+async function persistTickets(list){
+  await kvSet(TICKETS_KEY, JSON.stringify(list));
+}
+async function loadUsers(){
+  var raw = await kvGet(USERS_KEY);
+  try{ return raw ? JSON.parse(raw) : []; } catch(e){ return []; }
+}
+async function persistUsers(list){
+  await kvSet(USERS_KEY, JSON.stringify(list));
+}
+async function loadActivity(){
+  var raw = await kvGet(ACTIVITY_KEY);
+  try{ return raw ? JSON.parse(raw) : []; } catch(e){ return []; }
+}
+async function persistActivity(list){
+  await kvSet(ACTIVITY_KEY, JSON.stringify(list));
+}
+/* Fire-and-forget: appends one audit-trail entry (login/logout, ticket
+   filed, ticket status changed, user added/edited/deleted) and persists
+   it immediately so IT's Activity log stays current without the caller
+   having to await it. actor/actorDept default to the current session
+   when omitted, so most call sites only need to pass type + detail. */
+function logActivity(type, detail, actorOverride, actorDeptOverride){
+  var actor = actorOverride || (session ? session.username : 'Unknown');
+  var actorDept = actorDeptOverride || (session ? session.department : '—');
+  var entry = { id: uid(), type: type, actor: actor, actorDept: actorDept, detail: detail || '', at: new Date().toISOString() };
+  loadActivity().then(function(current){
+    var updated = [entry].concat(current);
+    if(updated.length > 500) updated = updated.slice(0, 500);
+    persistActivity(updated);
+    activityLog = updated;
+  });
+}
+function uid(){ return 'u_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,8); }
+
+function pad(n,len){ n=String(n); while(n.length<len) n='0'+n; return n; }
+function ymd(d){ return ''+d.getFullYear()+pad(d.getMonth()+1,2)+pad(d.getDate(),2); }
+function ymo(d){ return ''+d.getFullYear()+pad(d.getMonth()+1,2); }
+function nextTicketNumber(list){
+  var today = ymd(new Date());
+  var count = list.filter(function(t){ return t.id.indexOf('-'+today+'-') !== -1; }).length;
+  return 'GEMS-'+today+'-'+pad(count+1,3);
+}
+function fmtDateTime(iso){
+  var d = new Date(iso);
+  return d.toLocaleString('en-PH',{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'});
+}
+function fmtDateOnly(iso){
+  var d = new Date(iso);
+  return d.toLocaleString('en-PH',{month:'short',day:'numeric'});
+}
+function esc(s){
+  return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function deptName(id){ var d = DEPARTMENTS.filter(function(x){return x.id===id;})[0]; return d ? d.name : id; }
+
+/* ============================================================
+   ATTACHMENTS — lets anyone filing a request attach screenshots or
+   files (e.g. an error photo) so IT/HR can see the actual problem.
+   Files are read client-side and stored as base64 data URLs inside
+   the ticket itself (the same JSON blob server.js already persists)
+   so no separate upload endpoint is needed. Kept deliberately small:
+   up to 3 files, 4MB each, per request.
+============================================================ */
+var ATTACH_MAX_FILES = 3;
+var ATTACH_MAX_BYTES = 4 * 1024 * 1024;
+var pendingAttachments = [];
+function fmtFileSize(bytes){
+  if(bytes < 1024) return bytes + ' B';
+  if(bytes < 1024*1024) return Math.round(bytes/1024) + ' KB';
+  return (bytes/(1024*1024)).toFixed(1) + ' MB';
+}
+function fileToDataUrl(file){
+  return new Promise(function(resolve, reject){
+    var reader = new FileReader();
+    reader.onload = function(){ resolve({ name:file.name, type:file.type, size:file.size, dataUrl:reader.result }); };
+    reader.onerror = function(){ reject(new Error('Could not read file')); };
+    reader.readAsDataURL(file);
+  });
+}
+function clearAttachments(){
+  pendingAttachments = [];
+  var list = document.getElementById('attachment-list');
+  if(list) list.innerHTML = '';
+  var err = document.getElementById('attachment-err');
+  if(err){ err.textContent=''; err.classList.remove('show'); }
+}
+function attachmentFieldHtml(){
+  return ''
+  + '<div class="form-row">'
+  +   '<label class="field-label">Attach files (optional)</label>'
+  +   '<div class="attach-zone">'
+  +     '<label class="attach-btn" for="attachment-input">'+iconUpload(15,'currentColor')+'<span>Attach screenshots or files</span></label>'
+  +     '<input type="file" id="attachment-input" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt" style="display:none;">'
+  +     '<span class="attach-hint">Up to '+ATTACH_MAX_FILES+' files, 4MB each &mdash; screenshots help a lot.</span>'
+  +   '</div>'
+  +   '<div id="attachment-list" class="attach-list"></div>'
+  +   '<div id="attachment-err" class="u-err"></div>'
+  + '</div>';
+}
+function attachmentChipHtml(file, idx){
+  var isImage = file.type && file.type.indexOf('image/')===0;
+  var preview = isImage
+    ? '<img src="'+URL.createObjectURL(file)+'" class="attach-thumb" alt="">'
+    : '<span class="attach-thumb attach-thumb-file">'+iconFileGeneric(16,'currentColor')+'</span>';
+  return '<div class="attach-chip">'
+    + preview
+    + '<div class="attach-chip-meta"><div class="attach-chip-name">'+esc(file.name)+'</div><div class="attach-chip-size">'+fmtFileSize(file.size)+'</div></div>'
+    + '<button type="button" class="attach-chip-remove" onclick="removeAttachment('+idx+')" aria-label="Remove">'+iconXSmall(13,'currentColor')+'</button>'
+    + '</div>';
+}
+function renderAttachmentList(){
+  var list = document.getElementById('attachment-list');
+  if(!list) return;
+  list.innerHTML = pendingAttachments.map(attachmentChipHtml).join('');
+}
+function removeAttachment(idx){
+  pendingAttachments.splice(idx,1);
+  renderAttachmentList();
+}
+function wireAttachmentInput(){
+  var input = document.getElementById('attachment-input');
+  if(!input) return;
+  input.addEventListener('change', function(){
+    var errEl = document.getElementById('attachment-err');
+    var incoming = Array.prototype.slice.call(input.files || []);
+    for(var i=0;i<incoming.length;i++){
+      var f = incoming[i];
+      if(pendingAttachments.length >= ATTACH_MAX_FILES){
+        if(errEl){ errEl.textContent = 'You can attach up to '+ATTACH_MAX_FILES+' files.'; errEl.classList.add('show'); }
+        break;
+      }
+      if(f.size > ATTACH_MAX_BYTES){
+        if(errEl){ errEl.textContent = '"'+f.name+'" is over the 4MB limit and was skipped.'; errEl.classList.add('show'); }
+        continue;
+      }
+      if(errEl){ errEl.textContent=''; errEl.classList.remove('show'); }
+      pendingAttachments.push(f);
+    }
+    renderAttachmentList();
+    input.value = '';
+  });
+}
+async function resolveAttachmentsForSubmit(){
+  if(!pendingAttachments.length) return [];
+  return Promise.all(pendingAttachments.map(fileToDataUrl));
+}
+
+
+
+/* ============================================================
+   SMALL RENDER HELPERS
+============================================================ */
+function dot(color, size){
+  size = size || 7;
+  return '<span class="dot" style="background:'+color+';width:'+size+'px;height:'+size+'px;"></span>';
+}
+function statusPill(status){
+  var c = STATUS_COLOR[status] || COLORS.slate;
+  return '<span class="pill" style="background:'+c+'1f;color:'+c+';">'+dot(c)+esc(status)+'</span>';
+}
+function priorityTag(p){
+  var c = PRIORITY_COLOR[p] || COLORS.slate;
+  return '<span class="tag" style="color:'+c+';">'+dot(c)+esc(p)+'</span>';
+}
+function diamondSvg(color, size){
+  size = size || 20;
+  return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 24 24" fill="'+color+'" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L22 12L12 22L2 12L12 2Z"/></svg>';
+}
+function logoRow(darkText, big){
+  var titleSize = big ? 34 : 22;
+  var subSize = big ? 12 : 9;
+  return ''
+    + '<div class="logo-row '+(darkText?'dark-text':'light-text')+'">'
+    +   diamondSvg(COLORS.ruby, titleSize*0.65)
+    +   '<div>'
+    +     '<div class="logo-title" style="font-size:'+titleSize+'px;">GEMS</div>'
+    +     '<div class="logo-sub" style="font-size:'+subSize+'px;">SERVICE DESK</div>'
+    +   '</div>'
+    + '</div>';
+}
+function iconRefresh(size,color){ return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 24 24" fill="none" stroke="'+color+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>'; }
+function iconLogout(size,color){ return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 24 24" fill="none" stroke="'+color+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>'; }
+function iconSearch(size,color){ return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 24 24" fill="none" stroke="'+color+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>'; }
+function iconCalendar(size,color){ return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 24 24" fill="none" stroke="'+color+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>'; }
+function iconEye(size,color){ return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 24 24" fill="none" stroke="'+color+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>'; }
+function iconEyeOff(size,color){ return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 24 24" fill="none" stroke="'+color+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a18.6 18.6 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>'; }
+function iconUserPlus(size,color){ return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 24 24" fill="none" stroke="'+color+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="17" y1="11" x2="23" y2="11"/></svg>'; }
+function iconUsers(size,color){ return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 24 24" fill="none" stroke="'+color+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>'; }
+function iconBox(size,color){ return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 24 24" fill="none" stroke="'+color+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8L12 3 3 8l9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>'; }
+function iconKey(size,color){ return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 24 24" fill="none" stroke="'+color+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15" r="4"/><path d="M10.5 12.5L20 3M17 6l3 3M13.5 9.5l2.5 2.5"/></svg>'; }
+function iconBadge(size,color){ return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 24 24" fill="none" stroke="'+color+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2.5"/><path d="M5 17c.7-2 2.4-3 4-3s3.3 1 4 3"/><line x1="14" y1="8" x2="18" y2="8"/><line x1="14" y1="12" x2="18" y2="12"/></svg>'; }
+function iconShieldTile(size,color){ return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 24 24" fill="none" stroke="'+color+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-4z"/></svg>'; }
+function iconTruck(size,color){ return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 24 24" fill="none" stroke="'+color+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="6" width="14" height="11"/><path d="M15 9h4l3 3v5h-7z"/><circle cx="6" cy="19" r="2"/><circle cx="17.5" cy="19" r="2"/></svg>'; }
+function iconGlobe(size,color){ return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 24 24" fill="none" stroke="'+color+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>'; }
+function iconClipboard(size,color){ return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 24 24" fill="none" stroke="'+color+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2h6a1 1 0 0 1 1 1v2H8V3a1 1 0 0 1 1-1z"/><rect x="5" y="4" width="14" height="18" rx="2"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="15" y2="16"/></svg>'; }
+function iconCoins(size,color){ return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 24 24" fill="none" stroke="'+color+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="8" cy="6" rx="6" ry="3"/><path d="M2 6v6c0 1.7 2.7 3 6 3s6-1.3 6-3V6"/><path d="M2 12v6c0 1.7 2.7 3 6 3s6-1.3 6-3v-6"/><path d="M14 9.5c3 .3 5-1 5-2.5"/><path d="M14 15.3c3 .3 5-1 5-2.5"/><line x1="19" y1="7" x2="19" y2="15"/></svg>'; }
+function iconWallet(size,color){ return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 24 24" fill="none" stroke="'+color+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h3v-4z"/></svg>'; }
+function iconGear(size,color){ return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 24 24" fill="none" stroke="'+color+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>'; }
+function iconPallet(size,color){ return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 24 24" fill="none" stroke="'+color+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>'; }
+function iconSnowflake(size,color){ return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 24 24" fill="none" stroke="'+color+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="22"/><line x1="4.9" y1="4.9" x2="19.1" y2="19.1"/><line x1="4.9" y1="19.1" x2="19.1" y2="4.9"/><line x1="2" y1="12" x2="22" y2="12"/></svg>'; }
+function iconArrowRight(size,color){ return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 24 24" fill="none" stroke="'+color+'" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>'; }
+function iconMegaphone(size,color){ return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 24 24" fill="none" stroke="'+color+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11v3a2 2 0 0 0 2 2h1l3 5v-5h1l9 4V6l-9 4H6a2 2 0 0 0-2 2z"/><path d="M15 6v10"/></svg>'; }
+function iconHistory(size,color){ return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 24 24" fill="none" stroke="'+color+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><polyline points="3 4 3 9 8 9"/><polyline points="12 7 12 12 16 14"/></svg>'; }
+function iconLoginArrow(size,color){ return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 24 24" fill="none" stroke="'+color+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>'; }
+function iconLogoutArrow(size,color){ return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 24 24" fill="none" stroke="'+color+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h4"/><polyline points="14 17 19 12 14 7"/><line x1="19" y1="12" x2="7" y2="12"/></svg>'; }
+function iconTrashSmall(size,color){ return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 24 24" fill="none" stroke="'+color+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>'; }
+function iconTicketSmall(size,color){ return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 24 24" fill="none" stroke="'+color+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v1.5a1.5 1.5 0 0 0 0 3V15a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1.5a1.5 1.5 0 0 0 0-3z"/></svg>'; }
+function iconUserEditSmall(size,color){ return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 24 24" fill="none" stroke="'+color+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M21.2 12.8a1.4 1.4 0 0 0-2-2l-5 5V18h2.2l5-5z"/></svg>'; }
+function iconTrendingUp(size,color){ return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 24 24" fill="none" stroke="'+color+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 17 9 11 13 15 21 6"/><polyline points="14 6 21 6 21 13"/></svg>'; }
+function iconUserSingle(size,color){ return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 24 24" fill="none" stroke="'+color+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a8 8 0 0 1 16 0v1"/></svg>'; }
+function iconCalculator(size,color){ return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 24 24" fill="none" stroke="'+color+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="11" x2="8.01" y2="11"/><line x1="12" y1="11" x2="12.01" y2="11"/><line x1="16" y1="11" x2="16.01" y2="11"/><line x1="8" y1="15" x2="8.01" y2="15"/><line x1="12" y1="15" x2="12.01" y2="15"/><line x1="16" y1="15" x2="16.01" y2="15"/><line x1="8" y1="19" x2="16" y2="19"/></svg>'; }
+function iconPieChart(size,color){ return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 24 24" fill="none" stroke="'+color+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>'; }
+function iconForklift(size,color){ return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 24 24" fill="none" stroke="'+color+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="12" width="6" height="6" rx="1"/><line x1="9" y1="15" x2="13" y2="15"/><line x1="13" y1="4" x2="13" y2="19"/><path d="M13 6l6-2v14l-6-2"/><circle cx="6" cy="20" r="1.3"/></svg>'; }
+function iconCube(size,color){ return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 24 24" fill="none" stroke="'+color+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>'; }
+function iconMonitor(size,color){ return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 24 24" fill="none" stroke="'+color+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>'; }
+function iconUpload(size,color){ return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 24 24" fill="none" stroke="'+color+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>'; }
+function iconFileGeneric(size,color){ return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 24 24" fill="none" stroke="'+color+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>'; }
+function iconXSmall(size,color){ return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 24 24" fill="none" stroke="'+color+'" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'; }
+function iconPaperclip(size,color){ return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 24 24" fill="none" stroke="'+color+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>'; }
+function iconDownload(size,color){ return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 24 24" fill="none" stroke="'+color+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>'; }
+
+/* Per-department route accent + icon, used for the manifest-style tiles
+   on the home screen and the sidebar. Kept centralized so the color
+   used to paint a tile, its ribbon, and its route badge always match. */
+function deptAccent(id){
+  var map = {
+    sales: '#ff5a3c', marketing: '#f2c94c', importation: '#4a90e2', admin: '#9a9ea6',
+    hr: '#ffb454', accounting: '#d4a574', finance: '#b47fe0',
+    production: '#ff7597', inventory: '#5cc9e0', it: '#6fe3c4'
+  };
+  return map[id] || '#ff5a3c';
+}
+function deptTileIcon(id, size, color){
+  size = size || 22; color = color || '#fff';
+  if(id==='it') return iconMonitor(size,color);
+  if(id==='hr') return iconUsers(size,color);
+  if(id==='accounting') return iconCalculator(size,color);
+  if(id==='finance') return iconPieChart(size,color);
+  if(id==='inventory') return iconCube(size,color);
+  if(id==='production') return iconForklift(size,color);
+  if(id==='importation') return iconTruck(size,color);
+  if(id==='admin') return iconUserSingle(size,color);
+  if(id==='sales') return iconTrendingUp(size,color);
+  if(id==='marketing') return iconMegaphone(size,color);
+  return diamondSvg(color,size*0.8);
+}
+
+/* ============================================================
+   ROOT RENDER
+============================================================ */
+function render(){
+  var root = document.getElementById('root');
+  root.innerHTML = session ? appShellHtml() : loginHtml();
+  if(session){
+    renderContent();
+    if(activeTicketId) renderModal();
+  } else {
+    wireLoginEvents();
+  }
+}
+
+/* ============================================================
+   LOGIN SCREEN
+============================================================ */
+function loginHtml(){
+  var card = loginMode==='staff' ? loginStaffCardHtml()
+           : loginMode==='admin' ? loginAdminCardHtml()
+           : loginChooseCardHtml();
+  return ''
+  + '<div class="login-wrap">'
+  +   '<div class="login-crate-mark">'+iconPallet(120,'rgba(216,31,44,.07)')+'</div>'
+  +   '<div class="login-inner">'
+  +     logoRow(true, true)
+  +     card
+  +     '<p class="login-footer">GEMS Group of Companies &middot; Internal IT Service Desk</p>'
+  +   '</div>'
+  + '</div>';
+}
+
+function loginChooseCardHtml(){
+  return ''
+  + '<div class="login-card">'
+  +   '<span class="login-stub-tag">TICKET&nbsp;01</span>'
+  +   '<h1>WELCOME TO THE DESK</h1>'
+  +   '<p class="sub">Choose how you\'d like to continue.</p>'
+  +   '<div style="display:flex;flex-direction:column;gap:12px;">'
+  +     '<button type="button" class="btn btn-primary login-choice-btn" onclick="setLoginMode(\'staff\')">'
+  +       iconUsers(16,'#fff')
+  +       '<span>Continue as Requester</span>'
+  +     '</button>'
+  +     '<button type="button" class="btn btn-ghost login-choice-btn" onclick="setLoginMode(\'admin\')">'
+  +       iconShieldTile(16,COLORS.ink)
+  +       '<span>Resolving Workgroup</span>'
+  +     '</button>'
+  +   '</div>'
+  +   '<div class="hint-box show">Staff can file a request right away with just their name &mdash; no password needed. Department Admin and IT accounts sign in with the credentials issued by IT.</div>'
+  + '</div>';
+}
+
+function loginStaffCardHtml(){
+  return ''
+  + '<div class="login-card">'
+  +   '<span class="login-stub-tag">TICKET&nbsp;01</span>'
+  +   '<button type="button" class="back-link" onclick="setLoginMode(\'choose\')">&larr; Back</button>'
+  +   '<h1>CONTINUE AS STAFF</h1>'
+  +   '<p class="sub">No password needed &mdash; just tell us your name so requests can be traced back to you. You\'ll choose a department next.</p>'
+  +   '<form id="staff-login-form">'
+  +     '<div class="form-row">'
+  +       '<label class="field-label">Your name</label>'
+  +       '<input class="input" id="staff-name" type="text" placeholder="e.g. Juan Dela Cruz" autocomplete="name">'
+  +     '</div>'
+  +     '<div id="staff-login-error" class="err-box"></div>'
+  +     '<button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;font-family:var(--font-display);letter-spacing:.04em;font-size:15px;">CONTINUE</button>'
+  +   '</form>'
+  + '</div>';
+}
+
+function loginAdminCardHtml(){
+  return ''
+  + '<div class="login-card">'
+  +   '<span class="login-stub-tag">TICKET&nbsp;01</span>'
+  +   '<button type="button" class="back-link" onclick="setLoginMode(\'choose\')">&larr; Back</button>'
+  +   '<h1>RESOLVING WORKGROUP SIGN IN</h1>'
+  +   '<p class="sub">Sign in with the username and password issued by IT.</p>'
+  +   '<form id="login-form">'
+  +     '<div class="form-row">'
+  +       '<label class="field-label">Username</label>'
+  +       '<input class="input" id="login-user" type="text" placeholder="Enter your username" autocomplete="username">'
+  +     '</div>'
+  +     '<div class="form-row">'
+  +       '<label class="field-label">Password</label>'
+  +       '<input class="input" id="login-pass" type="password" placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;" autocomplete="current-password">'
+  +     '</div>'
+  +     '<div id="login-error" class="err-box"></div>'
+  +     '<button type="submit" class="btn btn-dark" style="width:100%;justify-content:center;font-family:var(--font-display);letter-spacing:.04em;font-size:15px;">LOG IN</button>'
+  +   '</form>'
+  + '</div>';
+}
+
+function setLoginMode(m){
+  loginMode = m;
+  document.getElementById('root').innerHTML = loginHtml();
+  wireLoginEvents();
+}
+
+function wireLoginEvents(){
+  if(loginMode==='admin'){
+    var form = document.getElementById('login-form');
+    if(!form) return;
+    form.addEventListener('submit', function(e){
+      e.preventDefault();
+      var errBox = document.getElementById('login-error');
+      var u = document.getElementById('login-user').value.trim();
+      var p = document.getElementById('login-pass').value;
+      var match = users.filter(function(x){ return x.username===u && x.password===p && x.role!=='staff'; })[0];
+      if(!match){
+        errBox.textContent = 'Incorrect username or password.';
+        errBox.classList.add('show');
+        return;
+      }
+      errBox.classList.remove('show');
+      var d = DEPARTMENTS.filter(function(x){ return x.id===match.deptId; })[0];
+      var isItAdmin = !!(d && d.isAdmin);
+      var isDeptAdmin = !isItAdmin && match.role==='deptAdmin';
+      session = { department: d ? d.name : match.deptId, deptId: match.deptId, username:u, isAdmin: isItAdmin, isDeptAdmin: isDeptAdmin, userId:match.id, isStaffKiosk:false };
+      activeTicketId = null;
+      activeDeptId = null;
+      activeHrType = null;
+      activeHrGroup = null;
+      selectedDeptId = null;
+      view = 'dashboard';
+      loginMode = 'choose';
+      logActivity('login', (isItAdmin?'Signed in as IT Administrator':'Signed in as Department Admin'), u, session.department);
+      render();
+      refresh();
+    });
+  } else if(loginMode==='staff'){
+    var sform = document.getElementById('staff-login-form');
+    if(!sform) return;
+    sform.addEventListener('submit', function(e){
+      e.preventDefault();
+      var errBox = document.getElementById('staff-login-error');
+      var name = document.getElementById('staff-name').value.trim();
+      if(!name){
+        errBox.textContent = 'Please enter your name to continue.';
+        errBox.classList.add('show');
+        return;
+      }
+      if(!isAllowedStaffName(name)){
+        errBox.textContent = 'This name is not recognized. Please check the spelling, or contact IT if you should have access.';
+        errBox.classList.add('show');
+        return;
+      }
+      errBox.classList.remove('show');
+      session = { department:'Staff', deptId:null, username:name, isAdmin:false, isDeptAdmin:false, userId:null, isStaffKiosk:true };
+      activeTicketId = null;
+      activeDeptId = null;
+      activeHrType = null;
+      activeHrGroup = null;
+      selectedDeptId = null;
+      view = 'home';
+      loginMode = 'choose';
+      logActivity('login', 'Continued as staff (kiosk, no password)', name, 'Staff');
+      render();
+      refresh();
+    });
+  }
+}
+
+/* ============================================================
+   APP SHELL
+============================================================ */
+function appShellHtml(){
+  var openCount = session.isAdmin ? tickets.filter(function(t){ return t.status==='Open' || t.status==='In Review'; }).length : 0;
+  function typeOpenCount(rt){
+    return tickets.filter(function(t){ return (t.requestType||'issue')===rt && (t.status==='Open' || t.status==='In Review'); }).length;
+  }
+  var deviceOpenCount = session.isAdmin ? typeOpenCount('device') : 0;
+  var accessOpenCount = session.isAdmin ? typeOpenCount('access') : 0;
+  var hireOpenCount = session.isAdmin ? typeOpenCount('newhire') : 0;
+  var deptOpenCount = session.isDeptAdmin ? tickets.filter(function(t){ return t.department===session.department && (t.status==='Open' || t.status==='In Review'); }).length : 0;
+
+  function navItem(key, label, iconSvg, badge){
+    var active = view===key;
+    return '<button class="nav-item'+(active?' active':'')+'" onclick="setView(\''+key+'\')">'
+      + '<span class="nav-left">'+iconSvg+esc(label)+'</span>'
+      + (badge>0 ? '<span class="nav-badge">'+badge+'</span>' : '')
+      + '</button>';
+  }
+  var iconDash = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>';
+  var iconPlus = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>';
+  var iconList = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>';
+  var iconShield = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-4z"/></svg>';
+  var iconBar = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>';
+
+  var navHtml = '';
+  if(session.isAdmin){
+    navHtml += navItem('dashboard','Dashboard',iconDash,0);
+    navHtml += navItem('review','Review queue',iconShield,openCount);
+    navHtml += navItem('all','All tickets',iconList,0);
+    navHtml += '<div class="nav-divider"></div>';
+    navHtml += navItem('deviceRequests','Device requests',iconBox('16','currentColor'),deviceOpenCount);
+    navHtml += navItem('accessRequests','Password / access',iconKey('16','currentColor'),accessOpenCount);
+    navHtml += navItem('newHires','New hire setups',iconBadge('16','currentColor'),hireOpenCount);
+    navHtml += '<div class="nav-divider"></div>';
+    navHtml += navItem('reports','Reports',iconBar,0);
+    navHtml += navItem('users','User management',iconUsers('16','currentColor'),0);
+    navHtml += navItem('activityLog','Activity log',iconHistory('16','currentColor'),0);
+  } else if(session.isDeptAdmin){
+    navHtml += navItem('dashboard','Dashboard',iconDash,0);
+    navHtml += navItem('review','Review queue',iconShield,deptOpenCount);
+    navHtml += navItem('all','All requests',iconList,0);
+  } else {
+    navHtml += navItem('home','Home',iconDash,0);
+  }
+
+  var roleLabel = session.isAdmin ? 'IT Administrator' : (session.isDeptAdmin ? 'Department Admin' : 'Staff');
+  var avatarInitial = esc((session.username||'?').trim().charAt(0).toUpperCase());
+
+  return ''
+  + '<div class="app-shell">'
+  +   '<aside class="sidebar">'
+  +     logoRow(true,false)
+  +     '<nav class="nav">'+navHtml+'</nav>'
+  +     '<div class="side-user">'
+  +       '<div class="side-user-top">'
+  +         '<div class="side-avatar">'+avatarInitial+'</div>'
+  +         '<div>'
+  +           '<div class="d">'+esc(session.username)+'</div>'
+  +           '<div class="u">'+esc(roleLabel)+'</div>'
+  +         '</div>'
+  +       '</div>'
+  +       '<div class="side-user-divider"></div>'
+  +       '<button onclick="logout()">'+iconLogout(12,COLORS.ruby)+' Logout</button>'
+  +     '</div>'
+  +   '</aside>'
+  +   '<main class="main">'
+  +     '<div class="topbar">'
+  +       '<div class="tb-left">GEMS Group of Companies &middot; Internal IT Service Desk</div>'
+  +       '<button class="tb-refresh" onclick="refresh()">'+iconRefresh(13,COLORS.slate)+' Refresh</button>'
+  +     '</div>'
+  +     '<div class="content" id="content"></div>'
+  +   '</main>'
+  +   '<div id="modal-root"></div>'
+  + '</div>';
+}
+
+function setView(v){
+  view = v;
+  editingUserId = null;
+  if(v==='home'){ activeDeptId = null; activeHrType = null; activeHrGroup = null; }
+  renderContent();
+}
+function logout(){
+  if(session) logActivity('logout', 'Logged out', session.username, session.department);
+  session=null; tickets=[]; view='dashboard'; activeTicketId=null;
+  activeDeptId=null; activeHrType=null; activeHrGroup=null;
+  loginMode='choose';
+  render();
+}
+
+function goHome(){ activeDeptId = null; activeHrType = null; activeHrGroup = null; view = 'home'; renderContent(); }
+function selectDept(id){ activeDeptId = id; activeHrType = null; activeHrGroup = null; view = 'deptMenu'; renderContent(); }
+function backToDeptMenu(){ activeHrType = null; activeHrGroup = null; view = 'deptMenu'; renderContent(); }
+function selectHrGroup(id){ activeHrGroup = id; activeHrType = null; view = 'hrGroupMenu'; renderContent(); }
+function backFromHrForm(){
+  activeHrType = null;
+  view = activeHrGroup ? 'hrGroupMenu' : 'deptMenu';
+  renderContent();
+}
+function selectHrType(id){
+  activeHrType = id;
+  var t = HR_TYPES.filter(function(x){ return x.id===id; })[0];
+  if(!t){ view='deptMenu'; renderContent(); return; }
+  if(t.special==='newhire') view = 'newHire';
+  else if(t.special==='announcement') view = 'hrAnnouncement';
+  else if(t.special==='memo') view = 'hrMemo';
+  else view = 'hrRequestForm';
+  renderContent();
+}
+
+async function refresh(){
+  tickets = await loadTickets();
+  users = await loadUsers();
+  activityLog = await loadActivity();
+  render();
+}
+
+/* ============================================================
+   CONTENT ROUTER
+============================================================ */
+function renderContent(){
+  var el = document.getElementById('content');
+  if(!el) return;
+  pendingAttachments = [];
+  if(view==='dashboard') el.innerHTML = dashboardHtml();
+  else if(view==='home') el.innerHTML = homeDeptPickerHtml();
+  else if(view==='deptMenu') el.innerHTML = deptMenuHtml();
+  else if(view==='hrGroupMenu') el.innerHTML = hrGroupMenuHtml();
+  else if(view==='deptNewTicket') el.innerHTML = newTicketHtml();
+  else if(view==='deptDeviceRequest') el.innerHTML = deviceRequestHtml();
+  else if(view==='deptAccessRequest') el.innerHTML = accessRequestHtml();
+  else if(view==='deptTickets') el.innerHTML = listHtml({title:esc(deptName(activeDeptId))+"'s requests", eyebrow:'Traceable by ticket #', deptFilterName:deptName(activeDeptId), filters:true, onBack:'goHome'});
+  else if(view==='hrRequestForm') el.innerHTML = hrRequestFormHtml();
+  else if(view==='hrAnnouncement') el.innerHTML = hrAnnouncementHtml();
+  else if(view==='hrMemo') el.innerHTML = hrMemoHtml();
+  else if(view==='new') el.innerHTML = newTicketHtml();
+  else if(view==='newDevice') el.innerHTML = deviceRequestHtml();
+  else if(view==='newAccess') el.innerHTML = accessRequestHtml();
+  else if(view==='newHire') el.innerHTML = newHireHtml();
+  else if(view==='mine') el.innerHTML = listHtml({title:"My department's tickets", eyebrow:'Traceable by ticket #', scopeDept:true, filters:true});
+  else if(view==='review') el.innerHTML = listHtml({
+      title: session.isDeptAdmin ? (deptName(session.deptId)+' requests awaiting action') : 'Tickets awaiting IT action',
+      eyebrow: session.isDeptAdmin ? 'Your department only' : 'Approve, reject, or route',
+      onlyOpenReview:true, filters:true,
+      deptFilterName: session.isDeptAdmin ? session.department : null
+    });
+  else if(view==='all') el.innerHTML = listHtml({
+      title: session.isDeptAdmin ? (deptName(session.deptId)+"'s requests") : 'All tickets',
+      eyebrow: session.isDeptAdmin ? 'Your department only' : 'Every department',
+      filters:true,
+      deptFilterName: session.isDeptAdmin ? session.department : null
+    });
+  else if(view==='deviceRequests') el.innerHTML = listHtml({title:'Device requests', eyebrow:'Printers, PCs, laptops & peripherals', requestType:'device', filters:true});
+  else if(view==='accessRequests') el.innerHTML = listHtml({title:'Password & access requests', eyebrow:'Password resets and shared folder / system access', requestType:'access', filters:true});
+  else if(view==='newHires') el.innerHTML = listHtml({title:'New hire setups', eyebrow:'Reported by HR for IT provisioning', requestType:'newhire', filters:true});
+  else if(view==='reports') el.innerHTML = reportsHtml();
+  else if(view==='users') el.innerHTML = usersHtml();
+  else if(view==='activityLog') el.innerHTML = activityLogHtml();
+
+  wireContentEvents();
+  animateTallies();
+}
+
+function animateTallies(){
+  var nodes = document.querySelectorAll('.stat-card .val[data-tally]');
+  var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  nodes.forEach(function(el, i){
+    var target = parseInt(el.getAttribute('data-tally'), 10) || 0;
+    if(reduceMotion || target === 0){ el.textContent = target; return; }
+    var start = null;
+    var duration = 550;
+    var delay = i * 70;
+    setTimeout(function(){
+      function step(ts){
+        if(start === null) start = ts;
+        var progress = Math.min((ts - start) / duration, 1);
+        var eased = 1 - Math.pow(1 - progress, 3);
+        el.textContent = Math.round(eased * target);
+        if(progress < 1) requestAnimationFrame(step);
+        else el.textContent = target;
+      }
+      requestAnimationFrame(step);
+    }, delay);
+  });
+}
+
+/* ============================================================
+   DASHBOARD
+============================================================ */
+function dashboardHtml(){
+  var mine = session.isAdmin ? tickets : tickets.filter(function(t){ return t.department===session.department; });
+  var openN = mine.filter(function(t){ return t.status==='Open'; }).length;
+  var activeN = mine.filter(function(t){ return ['In Review','Approved','In Progress'].indexOf(t.status)!==-1; }).length;
+  var resolvedN = mine.filter(function(t){ return t.status==='Resolved'; }).length;
+  var recent = mine.slice(0,5);
+  var eyebrowTxt = session.isAdmin ? 'IT overview' : (session.isDeptAdmin ? 'Department overview' : 'Your department');
+  var isManager = session.isAdmin || session.isDeptAdmin;
+
+  return ''
+  + '<div class="section-head">'
+  +   '<div><div class="eyebrow">'+eyebrowTxt+'</div><div class="h-title">Welcome, '+esc(session.department)+'</div></div>'
+  +   '<button class="btn btn-primary" onclick="setView(\''+(isManager?'review':'new')+'\')">'
+  +     '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>'
+  +     (isManager?'Review queue':'New ticket')
+  +   '</button>'
+  + '</div>'
+  + '<div class="stat-grid g3">'
+  +   statCard('Open', openN, COLORS.ruby)
+  +   statCard('In progress', activeN, COLORS.signal)
+  +   statCard('Resolved', resolvedN, COLORS.moss)
+  + '</div>'
+  + '<div class="eyebrow" style="color:var(--slate);margin-bottom:12px;">RECENT ACTIVITY</div>'
+  + '<div class="card">'
+  +   (recent.length===0
+        ? '<div class="list-empty">No tickets yet &mdash; nothing to trace.</div>'
+        : listHeaderHtml() + recent.map(rowHtml).join(''))
+  + '</div>';
+}
+function statCard(label, val, color){
+  return '<div class="card stat-card" style="color:'+color+'"><div class="lbl">'+dot(color)+esc(label)+'</div><div class="val" data-tally="'+val+'">0</div></div>';
+}
+
+/* ============================================================
+   HOME: DEPARTMENT PICKER (non-admin kiosk landing screen)
+============================================================ */
+function homeDeptPickerHtml(){
+  var tiles = DEPARTMENTS.map(function(d, i){
+    var accent = deptAccent(d.id);
+    return '<button type="button" class="card dept-tile" style="--stagger:'+i+';--accent:'+accent+';border-color:'+accent+'2e" onclick="selectDept(\''+d.id+'\')">'
+      + '<span class="tile-icon-badge" style="background:'+accent+';box-shadow:0 0 28px -4px '+accent+'99, 0 8px 18px -8px rgba(0,0,0,.6);">'+deptTileIcon(d.id,23,'#fff')+'</span>'
+      + '<span class="tile-name">'+esc(d.name)+'</span>'
+      + '<span class="tile-sub">File a request for this department</span>'
+      + '</button>';
+  }).join('');
+
+  return ''
+  + '<div class="section-head"><div><div class="eyebrow">Filing as '+esc(session.username)+'</div><div class="h-title">Choose department request</div>'
+  +   '<div class="h-subtitle">Select the department you want to file a request for.</div></div></div>'
+  + '<div class="dept-tile-grid">'+tiles+'</div>';
+}
+
+/* ============================================================
+   DEPARTMENT MENU (what to file for the chosen department)
+============================================================ */
+function deptMenuHtml(){
+  if(!activeDeptId) return homeDeptPickerHtml();
+  var name = deptName(activeDeptId);
+  var accent = deptAccent(activeDeptId);
+  var backBtn = '<button type="button" class="back-link" onclick="goHome()">&larr; Back to departments</button>';
+
+  if(activeDeptId==='hr'){
+    var groupedIds = [];
+    HR_GROUPS.forEach(function(g){ groupedIds = groupedIds.concat(g.types); });
+    var groupTiles = HR_GROUPS.map(function(g){
+      return '<button type="button" class="card hr-type-btn" onclick="selectHrGroup(\''+g.id+'\')">'
+        + '<span class="tile-icon" style="background:'+accent+'">'+iconKey(18,'#fff')+'</span>'
+        + '<span class="tile-name">'+esc(g.label)+'</span>'
+        + '</button>';
+    }).join('');
+    var standaloneTiles = HR_TYPES.filter(function(t){ return groupedIds.indexOf(t.id)===-1; }).map(function(t){
+      var icon = t.special==='newhire' ? iconBadge(18,'#fff')
+               : (t.special==='announcement' || t.special==='memo') ? iconUsers(18,'#fff')
+               : iconKey(18,'#fff');
+      return '<button type="button" class="card hr-type-btn" onclick="selectHrType(\''+t.id+'\')">'
+        + '<span class="tile-icon" style="background:'+accent+'">'+icon+'</span>'
+        + '<span class="tile-name">'+esc(t.label)+'</span>'
+        + '</button>';
+    }).join('');
+    return ''
+      + backBtn
+      + '<div class="section-head"><div><div class="eyebrow">HR</div><div class="h-title">What would you like to file?</div></div></div>'
+      + '<div class="hr-type-grid">'+groupTiles+standaloneTiles+'</div>';
+  }
+
+  if(activeDeptId==='it'){
+    return ''
+      + backBtn
+      + '<div class="section-head"><div><div class="eyebrow">IT</div><div class="h-title">What would you like to file?</div></div></div>'
+      + '<div class="dept-action-row">'
+      +   '<button type="button" class="card dept-action-card" onclick="setView(\'deptNewTicket\')">'
+      +     '<span class="tile-icon" style="background:'+accent+'">'+iconBox(18,'#fff')+'</span>'
+      +     '<span class="tile-name">New request</span>'
+      +     '<span class="tile-sub">Report a general issue to IT</span>'
+      +   '</button>'
+      +   '<button type="button" class="card dept-action-card" onclick="setView(\'deptDeviceRequest\')">'
+      +     '<span class="tile-icon" style="background:'+accent+'">'+iconBox(18,'#fff')+'</span>'
+      +     '<span class="tile-name">Device request</span>'
+      +     '<span class="tile-sub">Printers, PCs, laptops &amp; peripherals</span>'
+      +   '</button>'
+      +   '<button type="button" class="card dept-action-card" onclick="setView(\'deptAccessRequest\')">'
+      +     '<span class="tile-icon" style="background:'+accent+'">'+iconKey(18,'#fff')+'</span>'
+      +     '<span class="tile-name">Password / access request</span>'
+      +     '<span class="tile-sub">Resets and shared folder / system access</span>'
+      +   '</button>'
+      +   '<button type="button" class="card dept-action-card" onclick="setView(\'deptTickets\')">'
+      +     '<span class="tile-icon" style="background:'+accent+'">'+iconUsers(18,'#fff')+'</span>'
+      +     '<span class="tile-name">View requests</span>'
+      +     '<span class="tile-sub">See past requests filed for IT</span>'
+      +   '</button>'
+      + '</div>';
+  }
+
+  return ''
+    + backBtn
+    + '<div class="section-head"><div><div class="eyebrow">'+esc(name)+'</div><div class="h-title">What would you like to file?</div></div></div>'
+    + '<div class="dept-action-row">'
+    +   '<button type="button" class="card dept-action-card" onclick="setView(\'deptNewTicket\')">'
+    +     '<span class="tile-icon" style="background:'+accent+'">'+iconBox(18,'#fff')+'</span>'
+    +     '<span class="tile-name">New request</span>'
+    +     '<span class="tile-sub">Report an issue or request help for '+esc(name)+'</span>'
+    +   '</button>'
+    +   '<button type="button" class="card dept-action-card" onclick="setView(\'deptTickets\')">'
+    +     '<span class="tile-icon" style="background:'+accent+'">'+iconUsers(18,'#fff')+'</span>'
+    +     '<span class="tile-name">View requests</span>'
+    +     '<span class="tile-sub">See past requests filed for '+esc(name)+'</span>'
+    +   '</button>'
+    + '</div>';
+}
+
+/* ============================================================
+   HR GROUP SUBMENU (Payroll Concerns / Leave Concerns)
+============================================================ */
+function hrGroupMenuHtml(){
+  var g = HR_GROUPS.filter(function(x){ return x.id===activeHrGroup; })[0];
+  if(!g) return deptMenuHtml();
+  var accent = deptAccent('hr');
+  var backBtn = '<button type="button" class="back-link" onclick="backToDeptMenu()">&larr; Back to HR requests</button>';
+  var tiles = g.types.map(function(id){
+    var t = HR_TYPES.filter(function(x){ return x.id===id; })[0];
+    if(!t) return '';
+    return '<button type="button" class="card hr-type-btn" onclick="selectHrType(\''+t.id+'\')">'
+      + '<span class="tile-icon" style="background:'+accent+'">'+iconKey(18,'#fff')+'</span>'
+      + '<span class="tile-name">'+esc(t.label)+'</span>'
+      + '</button>';
+  }).join('');
+  return ''
+    + backBtn
+    + '<div class="section-head"><div><div class="eyebrow">HR &rarr; '+esc(g.label)+'</div><div class="h-title">'+esc(g.label)+'</div></div></div>'
+    + '<div class="hr-type-grid">'+tiles+'</div>';
+}
+
+/* ============================================================
+   GENERIC HR REQUEST FORM (overtime, undertime, leaves, attendance)
+============================================================ */
+function hrFieldInputHtml(fieldId){
+  var label = HR_FIELD_LABEL[fieldId] || fieldId;
+  if(fieldId==='reason'){
+    return '<div class="form-row"><label class="field-label">'+esc(label)+'</label><textarea class="input" id="hr-f-'+fieldId+'" rows="4" required></textarea></div>';
+  }
+  if(fieldId==='date' || fieldId==='dateFrom' || fieldId==='dateTo' || fieldId==='dateNeeded'){
+    return '<div><label class="field-label">'+esc(label)+'</label><input class="input" id="hr-f-'+fieldId+'" type="date" required></div>';
+  }
+  if(fieldId==='hours'){
+    return '<div><label class="field-label">'+esc(label)+'</label><input class="input" id="hr-f-'+fieldId+'" type="number" min="0" step="0.5" required></div>';
+  }
+  return '<div><label class="field-label">'+esc(label)+'</label><input class="input" id="hr-f-'+fieldId+'" type="text" required></div>';
+}
+function hrRequestFormHtml(){
+  var t = HR_TYPES.filter(function(x){ return x.id===activeHrType; })[0];
+  if(!t) return deptMenuHtml();
+  var backBtn = '<button type="button" class="back-link" onclick="backFromHrForm()">&larr; Back</button>';
+
+  var priBtns = PRIORITIES.map(function(p){
+    var c = PRIORITY_COLOR[p];
+    var sel = p===newHrPriority;
+    return '<button type="button" class="priority-btn'+(sel?' selected':'')+'" style="color:'+c+';'+(sel?('background:'+c+'1a;'):'')+'" onclick="selectHrPriority(\''+p+'\')">'+dot(sel?c:COLORS.slateLight)+esc(p)+'</button>';
+  }).join('');
+
+  var topFields = t.fields.filter(function(f){ return f!=='reason'; });
+  var topFieldsHtml = topFields.length ? ('<div class="grid2 form-row">'+topFields.map(hrFieldInputHtml).join('')+'</div>') : '';
+  var reasonHtml = t.fields.indexOf('reason')!==-1 ? hrFieldInputHtml('reason') : '';
+
+  return ''
+  + backBtn
+  + '<div class="section-head"><div><div class="eyebrow">HR request</div><div class="h-title">'+esc(t.label)+'</div></div></div>'
+  + '<div id="hr-success"></div>'
+  + '<form id="hr-request-form" class="card form-card" data-hr-type="'+esc(t.id)+'">'
+  +   topFieldsHtml
+  +   '<div class="form-row"><label class="field-label">Priority</label><div class="priority-row" id="hr-priority-row">'+priBtns+'</div></div>'
+  +   reasonHtml
+  +   attachmentFieldHtml()
+  +   '<button type="submit" class="btn btn-primary" id="submit-hr-btn">'
+  +     '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>'
+  +     'Submit request'
+  +   '</button>'
+  + '</form>';
+}
+function selectHrPriority(p){
+  newHrPriority = p;
+  var row = document.getElementById('hr-priority-row');
+  if(!row) return;
+  row.querySelectorAll('.priority-btn').forEach(function(btn, i){
+    var pr = PRIORITIES[i];
+    var c = PRIORITY_COLOR[pr];
+    var sel = pr===p;
+    btn.classList.toggle('selected', sel);
+    btn.style.background = sel ? (c+'1a') : 'transparent';
+    btn.innerHTML = dot(sel?c:COLORS.slateLight)+esc(pr);
+  });
+}
+
+/* ============================================================
+   HR ANNOUNCEMENT
+============================================================ */
+function hrAnnouncementHtml(){
+  var backBtn = '<button type="button" class="back-link" onclick="backFromHrForm()">&larr; Back</button>';
+  var priBtns = PRIORITIES.map(function(p){
+    var c = PRIORITY_COLOR[p];
+    var sel = p===newAnnouncementPriority;
+    return '<button type="button" class="priority-btn'+(sel?' selected':'')+'" style="color:'+c+';'+(sel?('background:'+c+'1a;'):'')+'" onclick="selectAnnouncementPriority(\''+p+'\')">'+dot(sel?c:COLORS.slateLight)+esc(p)+'</button>';
+  }).join('');
+
+  return ''
+  + backBtn
+  + '<div class="section-head"><div><div class="eyebrow">HR request</div><div class="h-title">Announcement</div></div></div>'
+  + '<div id="hr-announcement-success"></div>'
+  + '<form id="hr-announcement-form" class="card form-card">'
+  +   '<div class="form-row"><label class="field-label">Title</label><input class="input" id="an-title" placeholder="Short announcement title" required></div>'
+  +   '<div class="form-row"><label class="field-label">Priority</label><div class="priority-row" id="announcement-priority-row">'+priBtns+'</div></div>'
+  +   '<div class="form-row"><label class="field-label">Message</label><textarea class="input" id="an-message" rows="5" placeholder="What should be announced, and to whom." required></textarea></div>'
+  +   attachmentFieldHtml()
+  +   '<button type="submit" class="btn btn-primary" id="submit-announcement-btn">'
+  +     '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>'
+  +     'Send announcement'
+  +   '</button>'
+  + '</form>';
+}
+function selectAnnouncementPriority(p){
+  newAnnouncementPriority = p;
+  var row = document.getElementById('announcement-priority-row');
+  if(!row) return;
+  row.querySelectorAll('.priority-btn').forEach(function(btn, i){
+    var pr = PRIORITIES[i];
+    var c = PRIORITY_COLOR[pr];
+    var sel = pr===p;
+    btn.classList.toggle('selected', sel);
+    btn.style.background = sel ? (c+'1a') : 'transparent';
+    btn.innerHTML = dot(sel?c:COLORS.slateLight)+esc(pr);
+  });
+}
+
+/* ============================================================
+   MEMO
+============================================================ */
+function hrMemoHtml(){
+  var backBtn = '<button type="button" class="back-link" onclick="backFromHrForm()">&larr; Back</button>';
+  var priBtns = PRIORITIES.map(function(p){
+    var c = PRIORITY_COLOR[p];
+    var sel = p===newMemoPriority;
+    return '<button type="button" class="priority-btn'+(sel?' selected':'')+'" style="color:'+c+';'+(sel?('background:'+c+'1a;'):'')+'" onclick="selectMemoPriority(\''+p+'\')">'+dot(sel?c:COLORS.slateLight)+esc(p)+'</button>';
+  }).join('');
+
+  return ''
+  + backBtn
+  + '<div class="section-head"><div><div class="eyebrow">HR request</div><div class="h-title">Memo</div></div></div>'
+  + '<div id="hr-memo-success"></div>'
+  + '<form id="hr-memo-form" class="card form-card">'
+  +   '<div class="form-row"><label class="field-label">Title</label><input class="input" id="mo-title" placeholder="Short memo title" required></div>'
+  +   '<div class="form-row"><label class="field-label">Priority</label><div class="priority-row" id="memo-priority-row">'+priBtns+'</div></div>'
+  +   '<div class="form-row"><label class="field-label">Memo content</label><textarea class="input" id="mo-message" rows="5" placeholder="Details of the memo, and who it applies to." required></textarea></div>'
+  +   attachmentFieldHtml()
+  +   '<button type="submit" class="btn btn-primary" id="submit-memo-btn">'
+  +     '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>'
+  +     'Send memo'
+  +   '</button>'
+  + '</form>';
+}
+function selectMemoPriority(p){
+  newMemoPriority = p;
+  var row = document.getElementById('memo-priority-row');
+  if(!row) return;
+  row.querySelectorAll('.priority-btn').forEach(function(btn, i){
+    var pr = PRIORITIES[i];
+    var c = PRIORITY_COLOR[pr];
+    var sel = pr===p;
+    btn.classList.toggle('selected', sel);
+    btn.style.background = sel ? (c+'1a') : 'transparent';
+    btn.innerHTML = dot(sel?c:COLORS.slateLight)+esc(pr);
+  });
+}
+
+/* ============================================================
+   NEW TICKET
+============================================================ */
+function newTicketHtml(){
+  var priBtns = PRIORITIES.map(function(p){
+    var c = PRIORITY_COLOR[p];
+    var sel = p===newTicketPriority;
+    return '<button type="button" class="priority-btn'+(sel?' selected':'')+'" style="color:'+c+';'+(sel?('background:'+c+'1a;'):'')+'" onclick="selectPriority(\''+p+'\')">'+dot(sel?c:COLORS.slateLight)+esc(p)+'</button>';
+  }).join('');
+  var catOpts = CATEGORIES.map(function(c){ return '<option>'+esc(c)+'</option>'; }).join('');
+  var backBtn = activeDeptId ? '<button type="button" class="back-link" onclick="backToDeptMenu()">&larr; Back</button>' : '';
+
+  return ''
+  + backBtn
+  + '<div class="section-head"><div><div class="eyebrow">Report an incident</div><div class="h-title">Submit a new ticket</div></div></div>'
+  + '<div id="ticket-success"></div>'
+  + '<form id="new-ticket-form" class="card form-card">'
+  +   '<div class="form-row"><label class="field-label">Subject</label><input class="input" id="t-subject" placeholder="Short summary of the issue" required></div>'
+  +   '<div class="grid2 form-row">'
+  +     '<div><label class="field-label">Category</label><select class="input" id="t-category">'+catOpts+'</select></div>'
+  +     '<div><label class="field-label">Priority</label><div class="priority-row" id="priority-row">'+priBtns+'</div></div>'
+  +   '</div>'
+  +   '<div class="form-row"><label class="field-label">Describe what happened</label><textarea class="input" id="t-desc" rows="5" placeholder="What is affected, when it started, and any error messages you saw." required></textarea></div>'
+  +   attachmentFieldHtml()
+  +   '<button type="submit" class="btn btn-primary" id="submit-ticket-btn">'
+  +     '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>'
+  +     'Submit ticket'
+  +   '</button>'
+  + '</form>';
+}
+function selectPriority(p){
+  newTicketPriority = p;
+  document.querySelectorAll('.priority-btn').forEach(function(btn, i){
+    var pr = PRIORITIES[i];
+    var c = PRIORITY_COLOR[pr];
+    var sel = pr===p;
+    btn.classList.toggle('selected', sel);
+    btn.style.background = sel ? (c+'1a') : 'transparent';
+    btn.innerHTML = dot(sel?c:COLORS.slateLight)+esc(pr);
+  });
+}
+
+/* ============================================================
+   DEVICE REQUEST (Hardware / equipment)
+============================================================ */
+function deviceRequestHtml(){
+  var typeOpts = DEVICE_TYPES.map(function(d){ return '<option>'+esc(d)+'</option>'; }).join('');
+  var priBtns = PRIORITIES.map(function(p){
+    var c = PRIORITY_COLOR[p];
+    var sel = p===newDevicePriority;
+    return '<button type="button" class="priority-btn'+(sel?' selected':'')+'" style="color:'+c+';'+(sel?('background:'+c+'1a;'):'')+'" onclick="selectDevicePriority(\''+p+'\')">'+dot(sel?c:COLORS.slateLight)+esc(p)+'</button>';
+  }).join('');
+
+  var backBtn = activeDeptId ? '<button type="button" class="back-link" onclick="backToDeptMenu()">&larr; Back</button>' : '';
+  return ''
+  + backBtn
+  + '<div class="section-head"><div><div class="eyebrow">Equipment &amp; peripherals</div><div class="h-title">Request a device</div></div></div>'
+  + '<div id="device-success"></div>'
+  + '<form id="new-device-form" class="card form-card">'
+  +   '<div class="grid2 form-row">'
+  +     '<div><label class="field-label">Device type</label><select class="input" id="d-type">'+typeOpts+'</select></div>'
+  +     '<div><label class="field-label">Quantity</label><input class="input" id="d-qty" type="number" min="1" value="1" required></div>'
+  +   '</div>'
+  +   '<div class="grid2 form-row">'
+  +     '<div><label class="field-label">For (employee name / position)</label><input class="input" id="d-for" placeholder="e.g. Juan Dela Cruz, Warehouse Checker"></div>'
+  +     '<div><label class="field-label">Needed by</label><input class="input" id="d-needed" type="date"></div>'
+  +   '</div>'
+  +   '<div class="form-row"><label class="field-label">Priority</label><div class="priority-row" id="device-priority-row">'+priBtns+'</div></div>'
+  +   '<div class="form-row"><label class="field-label">Justification / details</label><textarea class="input" id="d-desc" rows="4" placeholder="Why this device is needed, current condition of existing unit, etc." required></textarea></div>'
+  +   attachmentFieldHtml()
+  +   '<button type="submit" class="btn btn-primary" id="submit-device-btn">'
+  +     '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>'
+  +     'Submit request'
+  +   '</button>'
+  + '</form>';
+}
+function selectDevicePriority(p){
+  newDevicePriority = p;
+  var row = document.getElementById('device-priority-row');
+  if(!row) return;
+  row.querySelectorAll('.priority-btn').forEach(function(btn, i){
+    var pr = PRIORITIES[i];
+    var c = PRIORITY_COLOR[pr];
+    var sel = pr===p;
+    btn.classList.toggle('selected', sel);
+    btn.style.background = sel ? (c+'1a') : 'transparent';
+    btn.innerHTML = dot(sel?c:COLORS.slateLight)+esc(pr);
+  });
+}
+
+/* ============================================================
+   ACCESS / PASSWORD REQUEST
+============================================================ */
+function accessRequestHtml(){
+  var typeOpts = ACCESS_TYPES.map(function(a){ return '<option>'+esc(a)+'</option>'; }).join('');
+  var priBtns = PRIORITIES.map(function(p){
+    var c = PRIORITY_COLOR[p];
+    var sel = p===newAccessPriority;
+    return '<button type="button" class="priority-btn'+(sel?' selected':'')+'" style="color:'+c+';'+(sel?('background:'+c+'1a;'):'')+'" onclick="selectAccessPriority(\''+p+'\')">'+dot(sel?c:COLORS.slateLight)+esc(p)+'</button>';
+  }).join('');
+
+  var backBtn = activeDeptId ? '<button type="button" class="back-link" onclick="backToDeptMenu()">&larr; Back</button>' : '';
+  return ''
+  + backBtn
+  + '<div class="section-head"><div><div class="eyebrow">Credentials &amp; permissions</div><div class="h-title">Request password reset / access</div></div></div>'
+  + '<div id="access-success"></div>'
+  + '<form id="new-access-form" class="card form-card">'
+  +   '<div class="form-row"><label class="field-label">Request type</label><select class="input" id="a-type">'+typeOpts+'</select></div>'
+  +   '<div class="form-row"><label class="field-label">System, folder, or account name</label><input class="input" id="a-target" placeholder="e.g. Accounting Shared Folder, SAP B1, Outlook" required></div>'
+  +   '<div class="form-row"><label class="field-label">Priority</label><div class="priority-row" id="access-priority-row">'+priBtns+'</div></div>'
+  +   '<div class="form-row"><label class="field-label">Reason for request</label><textarea class="input" id="a-desc" rows="4" placeholder="What you need access to, or why the password needs to be reset." required></textarea></div>'
+  +   attachmentFieldHtml()
+  +   '<button type="submit" class="btn btn-primary" id="submit-access-btn">'
+  +     '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>'
+  +     'Submit request'
+  +   '</button>'
+  + '</form>';
+}
+function selectAccessPriority(p){
+  newAccessPriority = p;
+  var row = document.getElementById('access-priority-row');
+  if(!row) return;
+  row.querySelectorAll('.priority-btn').forEach(function(btn, i){
+    var pr = PRIORITIES[i];
+    var c = PRIORITY_COLOR[pr];
+    var sel = pr===p;
+    btn.classList.toggle('selected', sel);
+    btn.style.background = sel ? (c+'1a') : 'transparent';
+    btn.innerHTML = dot(sel?c:COLORS.slateLight)+esc(pr);
+  });
+}
+
+/* ============================================================
+   NEW HIRE ANNOUNCEMENT (HR only)
+============================================================ */
+function newHireHtml(){
+  var deptOpts = DEPARTMENTS.map(function(d){ return '<option>'+esc(d.name)+'</option>'; }).join('');
+  var priBtns = PRIORITIES.map(function(p){
+    var c = PRIORITY_COLOR[p];
+    var sel = p===newHirePriority;
+    return '<button type="button" class="priority-btn'+(sel?' selected':'')+'" style="color:'+c+';'+(sel?('background:'+c+'1a;'):'')+'" onclick="selectHirePriority(\''+p+'\')">'+dot(sel?c:COLORS.slateLight)+esc(p)+'</button>';
+  }).join('');
+  var equipBoxes = EQUIPMENT_OPTIONS.map(function(eq, i){
+    var checked = newHireEquipment.indexOf(eq)!==-1;
+    return '<label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--ink);padding:6px 0;">'
+      + '<input type="checkbox" class="hire-equip-cb" value="'+esc(eq)+'"'+(checked?' checked':'')+' onchange="toggleHireEquip(this)"> '+esc(eq)
+      + '</label>';
+  }).join('');
+
+  return ''
+  + (activeHrType==='newemployee' ? '<button type="button" class="back-link" onclick="backFromHrForm()">&larr; Back</button>' : '')
+  + '<div class="section-head"><div><div class="eyebrow">HR &rarr; IT provisioning</div><div class="h-title">Announce a new hire</div></div></div>'
+  + '<div id="hire-success"></div>'
+  + '<form id="new-hire-form" class="card form-card">'
+  +   '<div class="grid2 form-row">'
+  +     '<div><label class="field-label">Employee name</label><input class="input" id="h-name" placeholder="Full name" required></div>'
+  +     '<div><label class="field-label">Position</label><input class="input" id="h-position" placeholder="Job title" required></div>'
+  +   '</div>'
+  +   '<div class="grid2 form-row">'
+  +     '<div><label class="field-label">Assigned department</label><select class="input" id="h-dept">'+deptOpts+'</select></div>'
+  +     '<div><label class="field-label">Start date</label><input class="input" id="h-start" type="date" required></div>'
+  +   '</div>'
+  +   '<div class="form-row"><label class="field-label">Priority</label><div class="priority-row" id="hire-priority-row">'+priBtns+'</div></div>'
+  +   '<div class="form-row"><label class="field-label">Equipment / accounts to set up</label>'
+  +     '<div class="card" style="padding:10px 16px;border-color:var(--line-soft);">'+equipBoxes+'</div>'
+  +   '</div>'
+  +   '<div class="form-row"><label class="field-label">Additional notes</label><textarea class="input" id="h-notes" rows="3" placeholder="Seating, reporting manager, anything else IT should know."></textarea></div>'
+  +   attachmentFieldHtml()
+  +   '<button type="submit" class="btn btn-primary" id="submit-hire-btn">'
+  +     '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>'
+  +     'Notify IT'
+  +   '</button>'
+  + '</form>';
+}
+function selectHirePriority(p){
+  newHirePriority = p;
+  var row = document.getElementById('hire-priority-row');
+  if(!row) return;
+  row.querySelectorAll('.priority-btn').forEach(function(btn, i){
+    var pr = PRIORITIES[i];
+    var c = PRIORITY_COLOR[pr];
+    var sel = pr===p;
+    btn.classList.toggle('selected', sel);
+    btn.style.background = sel ? (c+'1a') : 'transparent';
+    btn.innerHTML = dot(sel?c:COLORS.slateLight)+esc(pr);
+  });
+}
+function toggleHireEquip(cb){
+  var v = cb.value;
+  var idx = newHireEquipment.indexOf(v);
+  if(cb.checked && idx===-1) newHireEquipment.push(v);
+  if(!cb.checked && idx!==-1) newHireEquipment.splice(idx,1);
+}
+
+/* ============================================================
+   TICKET LIST
+============================================================ */
+function listHeaderHtml(){
+  return '<div class="list-header"><div>Ticket #</div><div>Subject</div><div>Department</div><div>Requested by</div><div>Priority</div><div>Status</div><div class="right">Filed</div></div>';
+}
+function rowHtml(t){
+  var rt = t.requestType||'issue';
+  var rtColor = REQUEST_TYPE_COLOR[rt] || COLORS.slate;
+  var typeTag = rt!=='issue' ? '<span class="tag" style="margin-left:8px;font-size:10px;color:'+rtColor+';">'+esc(REQUEST_TYPE_LABEL[rt]||rt)+'</span>' : '';
+  var attachMark = (t.attachments && t.attachments.length) ? '<span style="margin-left:7px;color:var(--text-mute);display:inline-flex;vertical-align:-2px;" title="'+t.attachments.length+' attachment(s)">'+iconPaperclip(12,'currentColor')+'</span>' : '';
+  return '<button class="list-row" onclick="openTicket(\''+t.id+'\')">'
+    + '<div class="mono" style="font-size:12.5px;font-weight:600;">'+esc(t.id)+'</div>'
+    + '<div class="truncate" style="font-weight:600;font-size:14px;">'+esc(t.subject)+typeTag+attachMark+'</div>'
+    + '<div style="font-size:12px;color:var(--slate);">'+esc(t.department)+'</div>'
+    + '<div class="truncate" style="font-size:12px;font-weight:600;color:var(--ink);">'+esc(t.submittedBy)+'</div>'
+    + '<div>'+priorityTag(t.priority)+'</div>'
+    + '<div>'+statusPill(t.status)+'</div>'
+    + '<div class="right" style="font-size:12px;color:var(--slate-light);">'+fmtDateOnly(t.createdAt)+'</div>'
+    + '</button>';
+}
+function currentListSource(opts){
+  var src = tickets;
+  if(opts.scopeDept) src = src.filter(function(t){ return t.department===session.department; });
+  if(opts.deptFilterName) src = src.filter(function(t){ return t.department===opts.deptFilterName; });
+  if(opts.onlyOpenReview) src = src.filter(function(t){ return t.status==='Open' || t.status==='In Review'; });
+  if(opts.requestType) src = src.filter(function(t){ return (t.requestType||'issue')===opts.requestType; });
+  return src;
+}
+function listHtml(opts){
+  window.__listOpts = opts;
+  var deptOpts = DEPARTMENTS.map(function(d){ return '<option>'+esc(d.name)+'</option>'; }).join('');
+  var statusOpts = STATUS_FLOW.map(function(s){ return '<option>'+esc(s)+'</option>'; }).join('');
+
+  var filtersHtml = '';
+  if(opts.filters){
+    filtersHtml = '<div class="filters">'
+      + '<div class="search-box">'+iconSearch(14,COLORS.slateLight)+'<input id="f-search" placeholder="Search ticket #, subject, or name"></div>'
+      + '<select id="f-status"><option>All</option>'+statusOpts+'</select>'
+      + ((opts.scopeDept || opts.deptFilterName) ? '' : '<select id="f-dept"><option>All</option>'+deptOpts+'</select>')
+      + '</div>';
+  }
+
+  return ''
+  + (opts.onBack ? ('<button type="button" class="back-link" onclick="'+opts.onBack+'()">&larr; Back</button>') : '')
+  + '<div class="section-head"><div><div class="eyebrow">'+esc(opts.eyebrow)+'</div><div class="h-title">'+esc(opts.title)+'</div></div></div>'
+  + filtersHtml
+  + '<div class="card" id="list-body">'+listBodyHtml(opts)+'</div>';
+}
+function listBodyHtml(opts){
+  var src = currentListSource(opts);
+  var q = (document.getElementById('f-search') && document.getElementById('f-search').value || '').toLowerCase();
+  var st = document.getElementById('f-status') ? document.getElementById('f-status').value : 'All';
+  var dp = document.getElementById('f-dept') ? document.getElementById('f-dept').value : 'All';
+
+  var filtered = src.filter(function(t){
+    if(st!=='All' && t.status!==st) return false;
+    if(dp && dp!=='All' && t.department!==dp) return false;
+    if(q && (t.id+' '+t.subject+' '+(t.submittedBy||'')).toLowerCase().indexOf(q)===-1) return false;
+    return true;
+  });
+
+  if(filtered.length===0) return '<div class="list-empty">No tickets match here yet.</div>';
+  return listHeaderHtml() + filtered.map(rowHtml).join('');
+}
+function refilterList(){
+  var body = document.getElementById('list-body');
+  if(body && window.__listOpts) body.innerHTML = listBodyHtml(window.__listOpts);
+}
+
+/* ============================================================
+   REPORTS
+============================================================ */
+function reportsHtml(){
+  var now = new Date();
+  var scoped = tickets.filter(function(t){
+    var created = new Date(t.createdAt);
+    return reportScope==='day' ? ymd(created)===ymd(now) : ymo(created)===ymo(now);
+  });
+
+  var byStatus = STATUS_FLOW.map(function(s){ return { s:s, n:scoped.filter(function(t){ return t.status===s; }).length }; });
+  var byDept = DEPARTMENTS.map(function(d){
+    return { d:d.name, n:scoped.filter(function(t){ return t.department===d.name; }).length };
+  }).filter(function(x){ return x.n>0; });
+
+  var statusBars = byStatus.map(function(o){
+    var pct = scoped.length ? (o.n/scoped.length*100) : 0;
+    return '<div class="bar-row"><div class="lab">'+esc(o.s)+'</div><div class="bar-track"><div class="bar-fill" style="width:'+pct+'%;background:'+STATUS_COLOR[o.s]+';"></div></div><div class="bar-n">'+o.n+'</div></div>';
+  }).join('');
+
+  var deptBars = byDept.length===0
+    ? '<div class="list-empty" style="padding:24px 0;">No filings in this scope.</div>'
+    : byDept.map(function(o){
+        var pct = scoped.length ? (o.n/scoped.length*100) : 0;
+        return '<div class="bar-row"><div class="lab">'+esc(o.d)+'</div><div class="bar-track"><div class="bar-fill" style="width:'+pct+'%;background:'+COLORS.ruby+';"></div></div><div class="bar-n">'+o.n+'</div></div>';
+      }).join('');
+
+  var scopedRows = scoped.length===0
+    ? '<div class="list-empty">Nothing filed in this window.</div>'
+    : scoped.map(function(t){
+        return '<div class="list-row" style="cursor:default;">'
+          + '<div class="mono" style="font-size:12.5px;font-weight:600;">'+esc(t.id)+'</div>'
+          + '<div class="truncate" style="font-weight:600;font-size:14px;">'+esc(t.subject)+'</div>'
+          + '<div style="font-size:12px;color:var(--slate);">'+esc(t.department)+'</div>'
+          + '<div class="truncate" style="font-size:12px;font-weight:600;color:var(--ink);">'+esc(t.submittedBy)+'</div>'
+          + '<div></div>'
+          + '<div>'+statusPill(t.status)+'</div>'
+          + '<div class="right" style="font-size:12px;color:var(--slate-light);">'+fmtDateTime(t.createdAt)+'</div>'
+          + '</div>';
+      }).join('');
+
+  return ''
+  + '<div class="section-head">'
+  +   '<div><div class="eyebrow">Trace &amp; audit</div><div class="h-title">Incident reports</div></div>'
+  +   '<div class="scope-toggle">'
+  +     '<button class="'+(reportScope==='day'?'active':'')+'" onclick="setReportScope(\'day\')">'+iconCalendar(12,reportScope==='day'?'#fff':COLORS.slate)+'Today</button>'
+  +     '<button class="'+(reportScope==='month'?'active':'')+'" onclick="setReportScope(\'month\')">'+iconCalendar(12,reportScope==='month'?'#fff':COLORS.slate)+'This month</button>'
+  +   '</div>'
+  + '</div>'
+  + '<div class="stat-grid g4">'
+  +   statCard('Total filed', scoped.length, COLORS.ink)
+  +   statCard('Open', scoped.filter(function(t){return t.status==='Open';}).length, COLORS.ruby)
+  +   statCard('In progress', scoped.filter(function(t){return ['In Review','Approved','In Progress'].indexOf(t.status)!==-1;}).length, COLORS.signal)
+  +   statCard('Resolved', scoped.filter(function(t){return t.status==='Resolved';}).length, COLORS.moss)
+  + '</div>'
+  + '<div class="grid2" style="margin-bottom:24px;">'
+  +   '<div class="card" style="padding:16px;"><div class="eyebrow" style="color:var(--slate);margin-bottom:12px;">BY STATUS</div>'+statusBars+'</div>'
+  +   '<div class="card" style="padding:16px;"><div class="eyebrow" style="color:var(--slate);margin-bottom:12px;">BY DEPARTMENT</div>'+deptBars+'</div>'
+  + '</div>'
+  + '<div class="eyebrow" style="color:var(--slate);margin-bottom:12px;">TICKETS IN SCOPE ('+scoped.length+')</div>'
+  + '<div class="card">'+scopedRows+'</div>';
+}
+function setReportScope(s){ reportScope = s; renderContent(); }
+
+/* ============================================================
+   TICKET DETAIL MODAL
+============================================================ */
+function requestDetailsHtml(t){
+  var rt = t.requestType||'issue';
+  if(rt==='issue' || !t.details) return '';
+  var rows = [];
+  if(rt==='device'){
+    rows = [
+      ['Device type', t.details.deviceType],
+      ['Quantity', t.details.quantity],
+      ['For', t.details.forWhom || '—'],
+      ['Needed by', t.details.neededBy ? fmtDateOnly(t.details.neededBy+'T00:00:00') : '—']
+    ];
+  } else if(rt==='access'){
+    rows = [
+      ['Request type', t.details.accessType],
+      ['System / folder / account', t.details.target]
+    ];
+  } else if(rt==='newhire'){
+    rows = [
+      ['Employee name', t.details.employeeName],
+      ['Position', t.details.position],
+      ['Assigned department', t.details.assignedDept],
+      ['Start date', t.details.startDate ? fmtDateOnly(t.details.startDate+'T00:00:00') : '—'],
+      ['Equipment / accounts', (t.details.equipment && t.details.equipment.length) ? t.details.equipment.join(', ') : 'None specified']
+    ];
+  } else if(rt==='hr'){
+    rows = [['HR request type', t.details.hrTypeLabel]];
+    Object.keys(t.details).forEach(function(k){
+      if(k==='hrType' || k==='hrTypeLabel') return;
+      var label = HR_FIELD_LABEL[k] || (k.charAt(0).toUpperCase()+k.slice(1));
+      var val = t.details[k];
+      if(k==='date' || k==='dateFrom' || k==='dateTo'){ val = val ? fmtDateOnly(val+'T00:00:00') : '—'; }
+      rows.push([label, val]);
+    });
+  }
+  var grid = rows.map(function(r){
+    return '<div><div class="k">'+esc(r[0])+'</div><div class="v">'+esc(r[1]||'—')+'</div></div>';
+  }).join('');
+  return '<div class="eyebrow" style="color:var(--slate);margin-bottom:10px;">'+esc(REQUEST_TYPE_LABEL[rt])+' DETAILS</div>'
+    + '<div class="meta-grid" style="margin-bottom:20px;">'+grid+'</div>';
+}
+function openTicket(id){ activeTicketId = id; modalStatus = null; renderModal(); }
+function closeModal(){ activeTicketId = null; document.getElementById('modal-root').innerHTML = ''; }
+
+function ticketAttachmentsHtml(t){
+  var files = t.attachments || [];
+  if(!files.length) return '';
+  var chips = files.map(function(f){
+    var isImage = f.type && f.type.indexOf('image/')===0;
+    var thumb = isImage
+      ? '<img src="'+f.dataUrl+'" class="attach-thumb" alt="'+esc(f.name)+'">'
+      : '<span class="attach-thumb attach-thumb-file">'+iconFileGeneric(16,'currentColor')+'</span>';
+    return '<div class="attach-chip">'
+      + thumb
+      + '<div class="attach-chip-meta"><div class="attach-chip-name">'+esc(f.name)+'</div><div class="attach-chip-size">'+fmtFileSize(f.size)+'</div></div>'
+      + '<div class="attach-actions">'
+      +   '<a href="'+f.dataUrl+'" target="_blank" rel="noopener" class="icon-btn" title="View">'+iconEye(13,'currentColor')+' View</a>'
+      +   '<a href="'+f.dataUrl+'" download="'+esc(f.name)+'" class="icon-btn" title="Download">'+iconDownload(13,'currentColor')+' Download</a>'
+      + '</div>'
+      + '</div>';
+  }).join('');
+  return '<div class="eyebrow" style="color:var(--slate);margin-bottom:10px;">'+iconPaperclip(12,'currentColor')+' ATTACHMENTS ('+files.length+')</div>'
+    + '<div class="attach-list" style="margin-bottom:20px;">'+chips+'</div>';
+}
+function renderModal(){
+  var root = document.getElementById('modal-root');
+  var t = tickets.filter(function(x){ return x.id===activeTicketId; })[0];
+  if(!t){ root.innerHTML=''; return; }
+  if(!modalStatus) modalStatus = t.status;
+
+  var history = t.history.map(function(h){
+    var c = STATUS_COLOR[h.status] || COLORS.slate;
+    return '<div class="activity-item">'+dot(c)+'<div><div class="txt"><b>'+esc(h.status)+'</b> &mdash; '+esc(h.note)+'</div><div class="who">'+esc(h.by)+' &middot; '+fmtDateTime(h.at)+'</div></div></div>';
+  }).join('');
+
+  var canManage = session.isAdmin || (session.isDeptAdmin && t.department===session.department);
+  var itAction = '';
+  if(canManage){
+    var quickRow = '';
+    if(t.status==='Open' || t.status==='In Review'){
+      quickRow = '<div class="quick-row">'
+        + '<button type="button" class="btn btn-primary" onclick="quickSetStatus(\'Approved\')">Approve</button>'
+        + '<button type="button" class="btn btn-muted" onclick="quickSetStatus(\'Rejected\')">Reject</button>'
+        + '</div>';
+    }
+    var statusBtns = STATUS_FLOW.map(function(s){
+      var c = STATUS_COLOR[s];
+      var sel = s===modalStatus;
+      return '<button type="button" class="status-btn'+(sel?' selected':'')+'" style="color:'+c+';'+(sel?('background:'+c+'1a;'):'')+'" onclick="setModalStatus(\''+s+'\')">'+esc(s)+'</button>';
+    }).join('');
+    itAction = ''
+      + '<div class="it-action">'
+      +   '<div class="eyebrow" style="color:var(--slate);margin-bottom:12px;">IT ACTION</div>'
+      +   quickRow
+      +   '<div class="status-flow" id="status-flow">'+statusBtns+'</div>'
+      +   '<textarea class="input" id="modal-note" rows="3" placeholder="Remarks for this update (visible to the department)&hellip;" style="margin-bottom:12px;"></textarea>'
+      +   '<button class="btn btn-dark" id="modal-save-btn" onclick="saveTicketUpdate()">'
+      +     '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>'
+      +     'Update ticket'
+      +   '</button>'
+      + '</div>';
+  } else {
+    itAction = '<div class="readonly-note">Only the IT team can change ticket status. You\'ll see updates here as they happen.</div>';
+  }
+
+  root.innerHTML = ''
+  + '<div class="modal-overlay show" onclick="if(event.target===this) closeModal()">'
+  +   '<div class="modal-panel">'
+  +     '<div class="modal-top"><div class="mono" style="font-size:13px;font-weight:700;color:var(--ruby);">'+esc(t.id)+'</div><button class="modal-close" onclick="closeModal()">Close &times;</button></div>'
+  +     '<div class="modal-subject">'+esc(t.subject)+'</div>'
+  +     '<div class="badge-row">'+statusPill(t.status)+priorityTag(t.priority)+'<span class="cat-chip">'+esc(t.category)+'</span></div>'
+  +     '<div class="meta-grid">'
+  +       '<div><div class="k">Department</div><div class="v">'+esc(t.department)+'</div></div>'
+  +       '<div><div class="k">Submitted by</div><div class="v">'+esc(t.submittedBy)+'</div></div>'
+  +       '<div><div class="k">Filed</div><div class="v">'+fmtDateTime(t.createdAt)+'</div></div>'
+  +     '</div>'
+  +     requestDetailsHtml(t)
+  +     '<div class="desc-box">'+esc(t.description)+'</div>'
+  +     ticketAttachmentsHtml(t)
+  +     '<div class="activity-title">ACTIVITY</div>'
+  +     '<div style="margin-bottom:20px;">'+history+'</div>'
+  +     itAction
+  +   '</div>'
+  + '</div>';
+}
+function setModalStatus(s){
+  modalStatus = s;
+  document.querySelectorAll('#status-flow .status-btn').forEach(function(btn){
+    var label = btn.textContent.trim();
+    var c = STATUS_COLOR[label];
+    var sel = label===s;
+    btn.classList.toggle('selected', sel);
+    btn.style.background = sel ? (c+'1a') : 'transparent';
+  });
+}
+function quickSetStatus(s){
+  setModalStatus(s);
+  var note = document.getElementById('modal-note');
+  if(note) note.focus();
+}
+async function saveTicketUpdate(){
+  var btn = document.getElementById('modal-save-btn');
+  btn.disabled = true;
+  var note = document.getElementById('modal-note').value.trim();
+  var current = await loadTickets();
+  var now = new Date().toISOString();
+  var updated = current.map(function(t){
+    if(t.id!==activeTicketId) return t;
+    var h = t.history.slice();
+    h.push({ status:modalStatus, note: note || ('Status changed to '+modalStatus+'.'), by:session.username, at:now });
+    return Object.assign({}, t, { status:modalStatus, history:h });
+  });
+  await persistTickets(updated);
+  tickets = updated;
+  logActivity('ticket_status', 'Set '+activeTicketId+' to '+modalStatus+(note?(' — '+note):''));
+  btn.disabled = false;
+  renderModal();
+  renderContent();
+}
+
+/* ============================================================
+   USER MANAGEMENT (IT only)
+============================================================ */
+function usersHtml(){
+  var deptOpts = DEPARTMENTS.map(function(d){ return '<option value="'+d.id+'">'+esc(d.name)+'</option>'; }).join('');
+
+  return ''
+  + '<div class="section-head"><div><div class="eyebrow">IT administration</div><div class="h-title">User management</div></div></div>'
+  + '<p class="u-note">Staff no longer need an account — anyone whose name is on the allowed staff list can pick "Continue as Staff" on the login screen and just type their name (see STAFF_ALLOWED_NAMES in the code to add or remove people). The accounts below are for people who need to sign in through "Resolving Workgroup": "Department Admin" accounts can only see and manage requests filed under their own department; "IT Administrator" accounts (department = IT) always get full access. You can still keep "Staff" entries here for your own records, but they are no longer used to sign in.</p>'
+  + '<div class="card add-user-card">'
+  +   '<div class="add-user-grid">'
+  +     '<div><label class="field-label">Department</label><select class="input" id="nu-dept">'+deptOpts+'</select></div>'
+  +     '<div><label class="field-label">Role</label><select class="input" id="nu-role"><option value="deptAdmin">Department Admin</option><option value="staff">Staff (reference only)</option></select></div>'
+  +     '<div><label class="field-label">Username</label><input class="input" id="nu-user" placeholder="e.g. sales2"></div>'
+  +     '<div><label class="field-label">Password</label><input class="input" id="nu-pass" placeholder="Set a password"></div>'
+  +     '<button class="btn btn-primary" id="add-user-btn" onclick="addUser()">'+iconUserPlus(15,'#fff')+'Add user</button>'
+  +   '</div>'
+  +   '<div class="u-err" id="add-user-err"></div>'
+  + '</div>'
+  + '<div class="card" id="user-table">'+userTableHtml()+'</div>';
+}
+
+function userTableHtml(){
+  if(users.length===0) return '<div class="list-empty">No accounts yet. Add the first one above.</div>';
+  var sorted = users.slice().sort(function(a,b){ return deptName(a.deptId).localeCompare(deptName(b.deptId)); });
+  var header = '<div class="user-header"><div>Department</div><div>Username</div><div>Password</div><div class="right">Actions</div></div>';
+  var rows = sorted.map(function(u){
+    if(editingUserId===u.id) return userEditRowHtml(u);
+    var visible = !!pwVisible[u.id];
+    var roleTag = u.deptId==='it' ? '' : (u.role==='deptAdmin' ? ' <span style="color:'+COLORS.signal+';font-weight:800;">&middot; Dept Admin</span>' : ' <span style="color:'+COLORS.slateLight+';font-weight:700;">&middot; Staff (unused)</span>');
+    return ''
+      + '<div class="user-row">'
+      +   '<div class="dept-badge">'+esc(deptName(u.deptId))+(u.deptId==='it'?(' '+dot(COLORS.ruby)):'')+roleTag+'</div>'
+      +   '<div class="mono" style="font-size:13px;">'+esc(u.username)+'</div>'
+      +   '<div class="pw-cell"><span class="mono" style="font-size:13px;">'+(visible?esc(u.password):'&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;')+'</span>'
+      +     '<button type="button" class="icon-btn" onclick="togglePw(\''+u.id+'\')">'+(visible?iconEyeOff(13,COLORS.slate):iconEye(13,COLORS.slate))+'</button></div>'
+      +   '<div class="row-actions right" style="justify-content:flex-end;display:flex;">'
+      +     '<button type="button" class="icon-btn" onclick="startEditUser(\''+u.id+'\')">Edit</button>'
+      +     '<button type="button" class="icon-btn danger" onclick="deleteUser(\''+u.id+'\')">Delete</button>'
+      +   '</div>'
+      + '</div>';
+  }).join('');
+  return header + rows;
+}
+function userEditRowHtml(u){
+  return ''
+    + '<div class="user-row">'
+    +   '<div class="dept-badge">'+esc(deptName(u.deptId))+'</div>'
+    +   '<div><input class="input-sm" id="edit-user-'+u.id+'" value="'+esc(u.username)+'"></div>'
+    +   '<div><input class="input-sm" id="edit-pass-'+u.id+'" value="'+esc(u.password)+'"></div>'
+    +   '<div class="row-actions right" style="justify-content:flex-end;display:flex;">'
+    +     '<button type="button" class="icon-btn" onclick="saveEditUser(\''+u.id+'\')">Save</button>'
+    +     '<button type="button" class="icon-btn" onclick="cancelEditUser()">Cancel</button>'
+    +   '</div>'
+    + '</div>';
+}
+function togglePw(id){ pwVisible[id] = !pwVisible[id]; document.getElementById('user-table').innerHTML = userTableHtml(); }
+function startEditUser(id){ editingUserId = id; document.getElementById('user-table').innerHTML = userTableHtml(); }
+function cancelEditUser(){ editingUserId = null; document.getElementById('user-table').innerHTML = userTableHtml(); }
+
+async function addUser(){
+  var errEl = document.getElementById('add-user-err');
+  errEl.classList.remove('show');
+  var deptId = document.getElementById('nu-dept').value;
+  var role = document.getElementById('nu-role').value;
+  var username = document.getElementById('nu-user').value.trim();
+  var password = document.getElementById('nu-pass').value;
+
+  if(!username || !password){
+    errEl.textContent = 'Enter a username and password.';
+    errEl.classList.add('show');
+    return;
+  }
+  var dup = users.filter(function(u){ return u.deptId===deptId && u.username.toLowerCase()===username.toLowerCase(); })[0];
+  if(dup){
+    errEl.textContent = 'That username already exists for this department.';
+    errEl.classList.add('show');
+    return;
+  }
+
+  var btn = document.getElementById('add-user-btn');
+  btn.disabled = true;
+  var current = await loadUsers();
+  var newUser = { id: uid(), deptId: deptId, username: username, password: password, role: (deptId==='it'?'itAdmin':role), createdAt: new Date().toISOString() };
+  var updated = current.concat([newUser]);
+  await persistUsers(updated);
+  users = updated;
+  logActivity('user_added', 'Added account "'+username+'" ('+deptName(deptId)+')');
+  btn.disabled = false;
+
+  document.getElementById('nu-user').value = '';
+  document.getElementById('nu-pass').value = '';
+  document.getElementById('nu-role').value = 'deptAdmin';
+  document.getElementById('user-table').innerHTML = userTableHtml();
+}
+
+async function saveEditUser(id){
+  var newUsername = document.getElementById('edit-user-'+id).value.trim();
+  var newPassword = document.getElementById('edit-pass-'+id).value;
+  if(!newUsername || !newPassword){ return; }
+
+  var current = await loadUsers();
+  var target = current.filter(function(u){ return u.id===id; })[0];
+  if(!target) return;
+  var dup = current.filter(function(u){ return u.id!==id && u.deptId===target.deptId && u.username.toLowerCase()===newUsername.toLowerCase(); })[0];
+  if(dup){ alert('That username already exists for this department.'); return; }
+
+  var updated = current.map(function(u){ return u.id===id ? Object.assign({}, u, { username:newUsername, password:newPassword }) : u; });
+  await persistUsers(updated);
+  users = updated;
+  logActivity('user_edited', 'Updated account for "'+deptName(target.deptId)+'" — now "'+newUsername+'"');
+  editingUserId = null;
+  document.getElementById('user-table').innerHTML = userTableHtml();
+}
+
+async function deleteUser(id){
+  var target = users.filter(function(u){ return u.id===id; })[0];
+  if(!target) return;
+  if(target.deptId==='it'){
+    var adminCount = users.filter(function(u){ return u.deptId==='it'; }).length;
+    if(adminCount<=1){ alert('You can\'t delete the last IT admin account.'); return; }
+  }
+  if(!confirm('Remove the login for '+target.username+' ('+deptName(target.deptId)+')? This cannot be undone.')) return;
+
+  var current = await loadUsers();
+  var updated = current.filter(function(u){ return u.id!==id; });
+  await persistUsers(updated);
+  users = updated;
+  logActivity('user_deleted', 'Deleted account "'+target.username+'" ('+deptName(target.deptId)+')');
+  document.getElementById('user-table').innerHTML = userTableHtml();
+}
+
+/* ============================================================
+   ACTIVITY LOG (IT only) — audit trail of logins, logouts, tickets
+   filed, and user accounts added/edited/deleted.
+============================================================ */
+var ACTIVITY_TYPE_LABEL = {
+  login:'Login', logout:'Logout', ticket_created:'Request filed',
+  ticket_status:'Request updated', user_added:'User added',
+  user_edited:'User edited', user_deleted:'User deleted'
+};
+var ACTIVITY_TYPE_COLOR = {
+  login: COLORS.moss, logout: COLORS.slate, ticket_created: COLORS.signal,
+  ticket_status: COLORS.amber, user_added: COLORS.moss,
+  user_edited: COLORS.signal, user_deleted: COLORS.ruby
+};
+function activityTypeIcon(type, size, color){
+  if(type==='login') return iconLoginArrow(size,color);
+  if(type==='logout') return iconLogoutArrow(size,color);
+  if(type==='ticket_created') return iconTicketSmall(size,color);
+  if(type==='ticket_status') return iconHistory(size,color);
+  if(type==='user_added') return iconUserPlus(size,color);
+  if(type==='user_edited') return iconUserEditSmall(size,color);
+  if(type==='user_deleted') return iconTrashSmall(size,color);
+  return iconHistory(size,color);
+}
+function activityLogHtml(){
+  var typeOpts = Object.keys(ACTIVITY_TYPE_LABEL).map(function(k){
+    return '<option value="'+k+'"'+(activityFilterAction===k?' selected':'')+'>'+esc(ACTIVITY_TYPE_LABEL[k])+'</option>';
+  }).join('');
+
+  return ''
+  + '<div class="section-head"><div><div class="eyebrow">IT administration</div><div class="h-title">Activity log</div></div></div>'
+  + '<p class="u-note">Every sign-in, sign-out, request filed, and user account added, edited, or deleted is recorded here, most recent first, so you can trace what any user did and when. The log keeps the most recent 500 entries.</p>'
+  + '<div class="filters">'
+  +   '<div class="search-box">'+iconSearch(14,COLORS.slateLight)+'<input id="act-search" placeholder="Search by user"></div>'
+  +   '<select id="act-type"><option value="All"'+(activityFilterAction==='All'?' selected':'')+'>All actions</option>'+typeOpts+'</select>'
+  + '</div>'
+  + '<div class="card" id="activity-body">'+activityBodyHtml()+'</div>';
+}
+function activityRowHtml(entry){
+  var c = ACTIVITY_TYPE_COLOR[entry.type] || COLORS.slate;
+  return '<div class="activity-log-row">'
+    + '<div class="mono" style="font-size:11.5px;color:var(--text-mute);">'+fmtDateTime(entry.at)+'</div>'
+    + '<div style="font-weight:700;font-size:13px;color:var(--text);">'+esc(entry.actor)+'</div>'
+    + '<div style="font-size:12px;color:var(--text-dim);">'+esc(entry.actorDept)+'</div>'
+    + '<div><span class="tag" style="color:'+c+';">'+activityTypeIcon(entry.type,12,c)+esc(ACTIVITY_TYPE_LABEL[entry.type]||entry.type)+'</span></div>'
+    + '<div class="truncate" style="font-size:12.5px;color:var(--text-dim);">'+esc(entry.detail)+'</div>'
+    + '</div>';
+}
+function activityBodyHtml(){
+  var q = (document.getElementById('act-search') && document.getElementById('act-search').value || '').toLowerCase();
+  var ty = document.getElementById('act-type') ? document.getElementById('act-type').value : 'All';
+  var filtered = activityLog.filter(function(e){
+    if(ty!=='All' && e.type!==ty) return false;
+    if(q && (e.actor+' '+e.actorDept).toLowerCase().indexOf(q)===-1) return false;
+    return true;
+  });
+  if(filtered.length===0) return '<div class="list-empty">No activity recorded yet.</div>';
+  var header = '<div class="activity-log-header"><div>Time</div><div>User</div><div>Department</div><div>Action</div><div>Detail</div></div>';
+  return header + filtered.map(activityRowHtml).join('');
+}
+function refilterActivity(){
+  activityFilterAction = document.getElementById('act-type') ? document.getElementById('act-type').value : 'All';
+  var body = document.getElementById('activity-body');
+  if(body) body.innerHTML = activityBodyHtml();
+}
+
+/* ============================================================
+   EVENT WIRING FOR NEW-TICKET FORM + LIST FILTERS
+============================================================ */
+function wireContentEvents(){
+  wireAttachmentInput();
+  var form = document.getElementById('new-ticket-form');
+  if(form){
+    form.addEventListener('submit', async function(e){
+      e.preventDefault();
+      var subject = document.getElementById('t-subject').value.trim();
+      var description = document.getElementById('t-desc').value.trim();
+      var category = document.getElementById('t-category').value;
+      if(!subject || !description) return;
+
+      var btn = document.getElementById('submit-ticket-btn');
+      btn.disabled = true;
+
+      var attachments = await resolveAttachmentsForSubmit();
+      var current = await loadTickets();
+      var id = nextTicketNumber(current);
+      var now = new Date().toISOString();
+      var ticket = {
+        id: id, subject: subject, category: category, priority: newTicketPriority, description: description,
+        department: activeDeptId ? deptName(activeDeptId) : session.department, submittedBy: session.username,
+        status: 'Open', createdAt: now, requestType:'issue', details:null, attachments: attachments,
+        history: [{ status:'Open', note:'Ticket submitted.', by:session.username, at:now }]
+      };
+      var updated = [ticket].concat(current);
+      await persistTickets(updated);
+      tickets = updated;
+      logActivity('ticket_created', 'Filed ' + id + ' (' + REQUEST_TYPE_LABEL['issue'] + ')');
+
+      document.getElementById('ticket-success').innerHTML =
+        '<div class="success-box"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="'+COLORS.moss+'" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>'
+        + '<div>Ticket <span class="mono" style="font-weight:700;">'+esc(id)+'</span> submitted. IT will review it shortly.</div></div>';
+
+      document.getElementById('t-subject').value='';
+      document.getElementById('t-desc').value='';
+      document.getElementById('t-category').selectedIndex=0;
+      newTicketPriority='Medium';
+      selectPriority('Medium');
+      clearAttachments();
+      btn.disabled = false;
+    });
+  }
+
+  var deviceForm = document.getElementById('new-device-form');
+  if(deviceForm){
+    deviceForm.addEventListener('submit', async function(e){
+      e.preventDefault();
+      var deviceType = document.getElementById('d-type').value;
+      var qty = document.getElementById('d-qty').value || '1';
+      var forWhom = document.getElementById('d-for').value.trim();
+      var neededBy = document.getElementById('d-needed').value;
+      var description = document.getElementById('d-desc').value.trim();
+      if(!description) return;
+
+      var btn = document.getElementById('submit-device-btn');
+      btn.disabled = true;
+
+      var attachments = await resolveAttachmentsForSubmit();
+      var current = await loadTickets();
+      var id = nextTicketNumber(current);
+      var now = new Date().toISOString();
+      var subject = 'Device Request: '+deviceType+' (x'+qty+')'+(forWhom?' for '+forWhom:'');
+      var ticket = {
+        id: id, subject: subject, category:'Hardware', priority: newDevicePriority, description: description,
+        department: activeDeptId ? deptName(activeDeptId) : session.department, submittedBy: session.username,
+        status: 'Open', createdAt: now, requestType:'device', attachments: attachments,
+        details: { deviceType: deviceType, quantity: qty, forWhom: forWhom, neededBy: neededBy },
+        history: [{ status:'Open', note:'Device request submitted.', by:session.username, at:now }]
+      };
+      var updated = [ticket].concat(current);
+      await persistTickets(updated);
+      tickets = updated;
+      logActivity('ticket_created', 'Filed ' + id + ' (' + REQUEST_TYPE_LABEL['device'] + ')');
+
+      document.getElementById('device-success').innerHTML =
+        '<div class="success-box"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="'+COLORS.moss+'" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>'
+        + '<div>Request <span class="mono" style="font-weight:700;">'+esc(id)+'</span> submitted. IT will review it shortly.</div></div>';
+
+      deviceForm.reset();
+      document.getElementById('d-qty').value = '1';
+      newDevicePriority='Medium';
+      selectDevicePriority('Medium');
+      clearAttachments();
+      btn.disabled = false;
+    });
+  }
+
+  var accessForm = document.getElementById('new-access-form');
+  if(accessForm){
+    accessForm.addEventListener('submit', async function(e){
+      e.preventDefault();
+      var accessType = document.getElementById('a-type').value;
+      var target = document.getElementById('a-target').value.trim();
+      var description = document.getElementById('a-desc').value.trim();
+      if(!target || !description) return;
+
+      var btn = document.getElementById('submit-access-btn');
+      btn.disabled = true;
+
+      var attachments = await resolveAttachmentsForSubmit();
+      var current = await loadTickets();
+      var id = nextTicketNumber(current);
+      var now = new Date().toISOString();
+      var subject = accessType+': '+target;
+      var ticket = {
+        id: id, subject: subject, category:'System Access (SAP / DMS / Email)', priority: newAccessPriority, description: description,
+        department: activeDeptId ? deptName(activeDeptId) : session.department, submittedBy: session.username,
+        status: 'Open', createdAt: now, requestType:'access', attachments: attachments,
+        details: { accessType: accessType, target: target },
+        history: [{ status:'Open', note:'Access request submitted.', by:session.username, at:now }]
+      };
+      var updated = [ticket].concat(current);
+      await persistTickets(updated);
+      tickets = updated;
+      logActivity('ticket_created', 'Filed ' + id + ' (' + REQUEST_TYPE_LABEL['access'] + ')');
+
+      document.getElementById('access-success').innerHTML =
+        '<div class="success-box"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="'+COLORS.moss+'" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>'
+        + '<div>Request <span class="mono" style="font-weight:700;">'+esc(id)+'</span> submitted. IT will review it shortly.</div></div>';
+
+      accessForm.reset();
+      newAccessPriority='Medium';
+      selectAccessPriority('Medium');
+      clearAttachments();
+      btn.disabled = false;
+    });
+  }
+
+  var hireForm = document.getElementById('new-hire-form');
+  if(hireForm){
+    hireForm.addEventListener('submit', async function(e){
+      e.preventDefault();
+      var name = document.getElementById('h-name').value.trim();
+      var position = document.getElementById('h-position').value.trim();
+      var dept = document.getElementById('h-dept').value;
+      var start = document.getElementById('h-start').value;
+      var notes = document.getElementById('h-notes').value.trim();
+      if(!name || !position || !start) return;
+
+      var btn = document.getElementById('submit-hire-btn');
+      btn.disabled = true;
+
+      var attachments = await resolveAttachmentsForSubmit();
+      var current = await loadTickets();
+      var id = nextTicketNumber(current);
+      var now = new Date().toISOString();
+      var subject = 'New Hire Setup: '+name+' ('+dept+')';
+      var description = 'New hire starting '+start+' as '+position+' in '+dept+'.'+(notes?(' Notes: '+notes):'');
+      var ticket = {
+        id: id, subject: subject, category:'New Hire Setup', priority: newHirePriority, description: description,
+        department: deptName('hr'), submittedBy: session.username,
+        status: 'Open', createdAt: now, requestType:'newhire', attachments: attachments,
+        details: { employeeName: name, position: position, assignedDept: dept, startDate: start, equipment: newHireEquipment.slice(), notes: notes },
+        history: [{ status:'Open', note:'New hire announced by HR.', by:session.username, at:now }]
+      };
+      var updated = [ticket].concat(current);
+      await persistTickets(updated);
+      tickets = updated;
+      logActivity('ticket_created', 'Filed ' + id + ' (' + REQUEST_TYPE_LABEL['newhire'] + ')');
+
+      document.getElementById('hire-success').innerHTML =
+        '<div class="success-box"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="'+COLORS.moss+'" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>'
+        + '<div>Notice <span class="mono" style="font-weight:700;">'+esc(id)+'</span> sent to IT for setup.</div></div>';
+
+      hireForm.reset();
+      newHireEquipment = [];
+      newHirePriority='High';
+      document.querySelectorAll('.hire-equip-cb').forEach(function(cb){ cb.checked=false; });
+      selectHirePriority('High');
+      clearAttachments();
+      btn.disabled = false;
+    });
+  }
+
+  var hrForm = document.getElementById('hr-request-form');
+  if(hrForm){
+    hrForm.addEventListener('submit', async function(e){
+      e.preventDefault();
+      var t = HR_TYPES.filter(function(x){ return x.id===hrForm.getAttribute('data-hr-type'); })[0];
+      if(!t) return;
+      var details = { hrType: t.id, hrTypeLabel: t.label };
+      var missing = false;
+      t.fields.forEach(function(f){
+        var el = document.getElementById('hr-f-'+f);
+        var v = el ? el.value.trim() : '';
+        if(!v) missing = true;
+        details[f] = v;
+      });
+      if(missing) return;
+
+      var btn = document.getElementById('submit-hr-btn');
+      btn.disabled = true;
+
+      var attachments = await resolveAttachmentsForSubmit();
+      var current = await loadTickets();
+      var id = nextTicketNumber(current);
+      var now = new Date().toISOString();
+      var subject = t.label + (details.employee ? (': '+details.employee) : '');
+      var description = t.label+' request.'+(details.reason ? (' Reason: '+details.reason) : '');
+      var ticket = {
+        id: id, subject: subject, category:'Other', priority: newHrPriority, description: description,
+        department: deptName('hr'), submittedBy: session.username,
+        status: 'Open', createdAt: now, requestType:'hr', details: details, attachments: attachments,
+        history: [{ status:'Open', note:'HR request submitted.', by:session.username, at:now }]
+      };
+      var updated = [ticket].concat(current);
+      await persistTickets(updated);
+      tickets = updated;
+      logActivity('ticket_created', 'Filed ' + id + ' (' + REQUEST_TYPE_LABEL['hr'] + ')');
+
+      document.getElementById('hr-success').innerHTML =
+        '<div class="success-box"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="'+COLORS.moss+'" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>'
+        + '<div>Request <span class="mono" style="font-weight:700;">'+esc(id)+'</span> submitted. IT/HR will review it shortly.</div></div>';
+
+      hrForm.reset();
+      newHrPriority='Medium';
+      selectHrPriority('Medium');
+      clearAttachments();
+      btn.disabled = false;
+    });
+  }
+
+  var announcementForm = document.getElementById('hr-announcement-form');
+  if(announcementForm){
+    announcementForm.addEventListener('submit', async function(e){
+      e.preventDefault();
+      var title = document.getElementById('an-title').value.trim();
+      var message = document.getElementById('an-message').value.trim();
+      if(!title || !message) return;
+
+      var btn = document.getElementById('submit-announcement-btn');
+      btn.disabled = true;
+
+      var attachments = await resolveAttachmentsForSubmit();
+      var current = await loadTickets();
+      var id = nextTicketNumber(current);
+      var now = new Date().toISOString();
+      var ticket = {
+        id: id, subject: 'Announcement: '+title, category:'Other', priority: newAnnouncementPriority, description: message,
+        department: deptName('hr'), submittedBy: session.username,
+        status: 'Open', createdAt: now, requestType:'hr',
+        details: { hrType:'announcement', hrTypeLabel:'Announcement', title: title, message: message }, attachments: attachments,
+        history: [{ status:'Open', note:'Announcement submitted.', by:session.username, at:now }]
+      };
+      var updated = [ticket].concat(current);
+      await persistTickets(updated);
+      tickets = updated;
+      logActivity('ticket_created', 'Filed ' + id + ' (' + REQUEST_TYPE_LABEL['hr'] + ')');
+
+      document.getElementById('hr-announcement-success').innerHTML =
+        '<div class="success-box"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="'+COLORS.moss+'" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>'
+        + '<div>Announcement <span class="mono" style="font-weight:700;">'+esc(id)+'</span> submitted.</div></div>';
+
+      announcementForm.reset();
+      newAnnouncementPriority='Medium';
+      selectAnnouncementPriority('Medium');
+      clearAttachments();
+      btn.disabled = false;
+    });
+  }
+
+  var memoForm = document.getElementById('hr-memo-form');
+  if(memoForm){
+    memoForm.addEventListener('submit', async function(e){
+      e.preventDefault();
+      var title = document.getElementById('mo-title').value.trim();
+      var message = document.getElementById('mo-message').value.trim();
+      if(!title || !message) return;
+
+      var btn = document.getElementById('submit-memo-btn');
+      btn.disabled = true;
+
+      var attachments = await resolveAttachmentsForSubmit();
+      var current = await loadTickets();
+      var id = nextTicketNumber(current);
+      var now = new Date().toISOString();
+      var ticket = {
+        id: id, subject: 'Memo: '+title, category:'Other', priority: newMemoPriority, description: message,
+        department: deptName('hr'), submittedBy: session.username,
+        status: 'Open', createdAt: now, requestType:'hr',
+        details: { hrType:'memo', hrTypeLabel:'Memo', title: title, message: message }, attachments: attachments,
+        history: [{ status:'Open', note:'Memo submitted.', by:session.username, at:now }]
+      };
+      var updated = [ticket].concat(current);
+      await persistTickets(updated);
+      tickets = updated;
+      logActivity('ticket_created', 'Filed ' + id + ' (' + REQUEST_TYPE_LABEL['hr'] + ')');
+
+      document.getElementById('hr-memo-success').innerHTML =
+        '<div class="success-box"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="'+COLORS.moss+'" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>'
+        + '<div>Memo <span class="mono" style="font-weight:700;">'+esc(id)+'</span> submitted.</div></div>';
+
+      memoForm.reset();
+      newMemoPriority='Medium';
+      selectMemoPriority('Medium');
+      clearAttachments();
+      btn.disabled = false;
+    });
+  }
+
+  ['f-search','f-status','f-dept'].forEach(function(id){
+    var el = document.getElementById(id);
+    if(el){
+      var evt = (id==='f-search') ? 'input' : 'change';
+      el.addEventListener(evt, refilterList);
+    }
+  });
+
+  ['act-search','act-type'].forEach(function(id){
+    var el = document.getElementById(id);
+    if(el){
+      var evt = (id==='act-search') ? 'input' : 'change';
+      el.addEventListener(evt, refilterActivity);
+    }
+  });
+}
+
+/* ============================================================
+   INIT
+============================================================ */
+(async function init(){
+  document.getElementById('root').innerHTML = '<div class="login-wrap"><div class="loading-txt">Loading GEMS Service Desk&hellip;</div></div>';
+  users = await loadUsers();
+  if(!users.length){
+    users = SEED_USERS.map(function(s){ return Object.assign({ id: uid(), createdAt: new Date().toISOString() }, s); });
+    await persistUsers(users);
+  }
+  usersLoaded = true;
+  render();
+})();
+</script>
+</body>
+</html>
