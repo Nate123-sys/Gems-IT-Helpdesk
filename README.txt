@@ -1,6 +1,13 @@
 GEMS SERVICE DESK - LOCAL SERVER SETUP
 ========================================
 
+
+WHAT CHANGED (9/29/26)
+-----------------------
+The current version which has improved UI and functions
+has been pushed to another branch refer to https://github.com/Nate123-sys/Gems-IT-Helpdesk/tree/master
+
+
 WHAT CHANGED
 ------------
 The app used to save tickets/users only in each browser's own local
