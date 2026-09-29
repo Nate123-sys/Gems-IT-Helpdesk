@@ -1,0 +1,13 @@
+{
+  "name": "gems-service-desk",
+  "version": "1.0.0",
+  "private": true,
+  "description": "GEMS internal IT service desk - local server with on-disk JSON storage",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}
